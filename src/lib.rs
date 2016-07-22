@@ -79,3 +79,105 @@ impl<T> From<Vec<T>> for PresortedVec<T> {
         }
     }
 }
+
+#[test]
+fn test_push() {
+    let mut vec = PresortedVec::new();
+    assert_eq!(vec.len(), 0);
+    assert_eq!(vec.get(0), None);
+    assert_eq!(vec.is_presorted(), true);
+
+    vec.push(0);
+    assert_eq!(vec.len(), 1);
+    assert_eq!(vec.get(0), Some(&0));
+    assert_eq!(vec.get(1), None);
+    assert_eq!(vec.is_presorted(), true);
+    assert_eq!(vec.sorted_iter().collect::<Vec<&usize>>(), vec![&0]);
+
+    vec.push(30);
+    assert_eq!(vec.len(), 2);
+    assert_eq!(vec.get(0), Some(&0));
+    assert_eq!(vec.get(1), Some(&30));
+    assert_eq!(vec.get(2), None);
+    assert_eq!(vec.is_presorted(), true);
+    assert_eq!(vec.sorted_iter().collect::<Vec<&usize>>(), vec![&0, &30]);
+
+    vec.push(20);
+    assert_eq!(vec.len(), 3);
+    assert_eq!(vec.get(0), Some(&0));
+    assert_eq!(vec.get(1), Some(&30));
+    assert_eq!(vec.get(2), Some(&20));
+    assert_eq!(vec.get(3), None);
+    assert_eq!(vec.is_presorted(), false);
+    assert_eq!(vec.sorted_iter().collect::<Vec<&usize>>(), vec![&0, &20, &30]);
+
+    assert_eq!(vec.len(), 3);
+    assert_eq!(vec.get(0), Some(&0));
+    assert_eq!(vec.get(1), Some(&30));
+    assert_eq!(vec.get(2), Some(&20));
+    assert_eq!(vec.get(3), None);
+    assert_eq!(vec.is_presorted(), true);
+    assert_eq!(vec.sorted_iter().collect::<Vec<&usize>>(), vec![&0, &20, &30]);
+
+    vec.push(10);
+    assert_eq!(vec.len(), 4);
+    assert_eq!(vec.get(0), Some(&0));
+    assert_eq!(vec.get(1), Some(&30));
+    assert_eq!(vec.get(2), Some(&20));
+    assert_eq!(vec.get(3), Some(&10));
+    assert_eq!(vec.get(4), None);
+    assert_eq!(vec.is_presorted(), false);
+    assert_eq!(vec.sorted_iter().collect::<Vec<&usize>>(), vec![&0, &10, &20, &30]);
+
+    assert_eq!(vec.len(), 4);
+    assert_eq!(vec.get(0), Some(&0));
+    assert_eq!(vec.get(1), Some(&30));
+    assert_eq!(vec.get(2), Some(&20));
+    assert_eq!(vec.get(3), Some(&10));
+    assert_eq!(vec.get(4), None);
+    assert_eq!(vec.is_presorted(), true);
+    assert_eq!(vec.sorted_iter().collect::<Vec<&usize>>(), vec![&0, &10, &20, &30]);
+}
+
+#[test]
+fn test_set() {
+    let mut vec = PresortedVec::from(vec![0, 30, 20, 10]);
+    assert_eq!(vec.len(), 4);
+    assert_eq!(vec.get(0), Some(&0));
+    assert_eq!(vec.get(1), Some(&30));
+    assert_eq!(vec.get(2), Some(&20));
+    assert_eq!(vec.get(3), Some(&10));
+    assert_eq!(vec.get(4), None);
+    assert_eq!(vec.is_presorted(), false);
+    assert_eq!(vec.sorted_iter().collect::<Vec<&usize>>(), vec![&0, &10, &20, &30]);
+
+    vec.set(2, 21);
+    assert_eq!(vec.len(), 4);
+    assert_eq!(vec.get(0), Some(&0));
+    assert_eq!(vec.get(1), Some(&30));
+    assert_eq!(vec.get(2), Some(&21));
+    assert_eq!(vec.get(3), Some(&10));
+    assert_eq!(vec.get(4), None);
+    assert_eq!(vec.is_presorted(), true);
+    assert_eq!(vec.sorted_iter().collect::<Vec<&usize>>(), vec![&0, &10, &21, &30]);
+
+    vec.set(2, 31);
+    assert_eq!(vec.len(), 4);
+    assert_eq!(vec.get(0), Some(&0));
+    assert_eq!(vec.get(1), Some(&30));
+    assert_eq!(vec.get(2), Some(&31));
+    assert_eq!(vec.get(3), Some(&10));
+    assert_eq!(vec.get(4), None);
+    assert_eq!(vec.is_presorted(), false);
+    assert_eq!(vec.sorted_iter().collect::<Vec<&usize>>(), vec![&0, &10, &30, &31]);
+
+    vec.set(2, 1);
+    assert_eq!(vec.len(), 4);
+    assert_eq!(vec.get(0), Some(&0));
+    assert_eq!(vec.get(1), Some(&30));
+    assert_eq!(vec.get(2), Some(&1));
+    assert_eq!(vec.get(3), Some(&10));
+    assert_eq!(vec.get(4), None);
+    assert_eq!(vec.is_presorted(), false);
+    assert_eq!(vec.sorted_iter().collect::<Vec<&usize>>(), vec![&0, &1, &10, &30]);
+}
