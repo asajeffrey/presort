@@ -1,75 +1,61 @@
 #[derive(Clone,Debug)]
 pub struct PresortedVec<T> {
-    unsorted: Vec<T>,
-    sorted: Vec<T>,
-    permutation: Vec<usize>,
+    contents: Vec<T>,
     is_sorted: bool,
+    permute_original_to_contents: Vec<usize>,
+    permute_contents_to_original: Vec<usize>,
 }
 
 impl<T> PresortedVec<T>
-where T: Ord + Clone {
+where T: Ord {
     pub fn new() -> PresortedVec<T> {
         PresortedVec {
-            unsorted: Vec::new(),
-            sorted: Vec::new(),
-            permutation: Vec::new(),
+            contents: Vec::new(),
             is_sorted: true,
+            permute_original_to_contents: Vec::new(),
+            permute_contents_to_original: Vec::new(),
         }
     }
-    pub fn sorted(&mut self) -> &[T] {
+    pub fn sorted_slice(&mut self) -> &[T] {
         if !self.is_sorted {
-            self.sorted.clear();
-            self.permutation.resize(self.unsorted.len(), 0);
-            let mut pairs: Vec<(T, usize)> = self.unsorted.iter().enumerate().map(|(x,y)| (y.clone(),x)).collect();
+            let permute_contents_to_original = &mut *self.permute_contents_to_original;
+            let permute_original_to_contents = &mut *self.permute_original_to_contents;
+            let mut pairs: Vec<(T, usize)> = self.contents.drain(..)
+                .enumerate()
+                .map(|(contents_index, value)| (value, permute_contents_to_original[contents_index]))
+                .collect();
             pairs.sort();
-            for (sorted_index, (value, index)) in pairs.drain(..).enumerate() {
-                self.permutation[index] = sorted_index;
-                self.sorted.push(value);
-            }
             self.is_sorted = true;
-        }
-        &*self.sorted
-    }
-    pub fn unsorted(&self) -> &[T] {
-        &*self.unsorted
-    }
-    pub fn get(&self, index: usize) -> Option<&T> {
-        self.unsorted.get(index)
-    }
-    pub fn last(&self) -> Option<&T> {
-        self.unsorted.last()
-    }
-    pub fn set(&mut self, index: usize, value: T) {
-        if self.is_sorted {
-            let sorted_index = self.permutation[index];
-            let sorted_before = self.sorted.get(sorted_index.wrapping_sub(1)).map(|before| before <= &value).unwrap_or(true);
-            let sorted_after = self.sorted.get(sorted_index.wrapping_add(1)).map(|after| &value <= after).unwrap_or(true);
-            if sorted_before && sorted_after {
-                self.sorted[sorted_index] = value.clone();
-            } else {
-                self.is_sorted = false;
+            for (contents_index, (value, original_index)) in pairs.drain(..).enumerate() {
+                self.contents.push(value);
+                permute_contents_to_original[contents_index] = original_index;
+                permute_original_to_contents[original_index] = contents_index;
             }
         }
-        self.unsorted[index] = value;
+        &*self.contents
+    }
+    pub fn get(&self, original_index: usize) -> Option<&T> {
+        self.contents.get(self.permute_original_to_contents[original_index])
+    }
+    pub fn set(&mut self, original_index: usize, value: T) {
+        let contents_index = self.permute_original_to_contents[original_index];
+        self.is_sorted =
+            self.is_sorted &&
+            self.contents.get(contents_index.wrapping_sub(1)).map(|before| before <= &value).unwrap_or(true) &&
+            self.contents.get(contents_index.wrapping_add(1)).map(|after| &value <= after).unwrap_or(true);
+        self.contents[contents_index] = value;
     }
     pub fn push(&mut self, value: T) {
-        if self.is_sorted {
-            let sorted_index = self.sorted.len();
-            let sorted_before = self.sorted.get(sorted_index.wrapping_sub(1)).map(|before| before <= &value).unwrap_or(true);
-            if sorted_before {
-                self.permutation.push(sorted_index);
-                self.sorted.push(value.clone());
-            } else {
-                self.is_sorted = false;
-            }
-        }
-        self.unsorted.push(value);
+        let original_index = self.contents.len();
+        let contents_index = original_index;
+        self.is_sorted =
+            self.is_sorted &&
+            self.contents.get(contents_index.wrapping_sub(1)).map(|before| before <= &value).unwrap_or(true);
+        self.contents.push(value);
+        self.permute_original_to_contents.push(contents_index);
+        self.permute_contents_to_original.push(original_index);
     }
     pub fn len(&self) -> usize {
-        self.unsorted.len()
-    }
-    pub fn truncate(&mut self, length: usize) {
-        self.unsorted.truncate(length);
-        self.is_sorted = false;
+        self.contents.len()
     }
 }
