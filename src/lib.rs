@@ -41,7 +41,9 @@ where T: Ord {
         self.is_sorted
     }
     pub fn get(&self, original_index: usize) -> Option<&T> {
-        self.contents.get(self.permute_original_to_contents[original_index])
+        self.permute_original_to_contents
+            .get(original_index)
+            .and_then(|&contents_index| self.contents.get(contents_index))
     }
     pub fn set(&mut self, original_index: usize, value: T) {
         let contents_index = self.permute_original_to_contents[original_index];
@@ -63,5 +65,17 @@ where T: Ord {
     }
     pub fn len(&self) -> usize {
         self.contents.len()
+    }
+}
+
+impl<T> From<Vec<T>> for PresortedVec<T> {
+    fn from(vec: Vec<T>) -> PresortedVec<T> {
+        let len = vec.len();
+        PresortedVec {
+            contents: vec,
+            is_sorted: false,
+            permute_original_to_contents: (0..len).collect(),
+            permute_contents_to_original: (0..len).collect(),
+        }
     }
 }
