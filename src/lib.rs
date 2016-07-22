@@ -16,7 +16,7 @@ where T: Ord {
             permute_contents_to_original: Vec::new(),
         }
     }
-    pub fn sorted_slice(&mut self) -> &[T] {
+    pub fn presort(&mut self) {
         if !self.is_sorted {
             let permute_contents_to_original = &mut *self.permute_contents_to_original;
             let permute_original_to_contents = &mut *self.permute_original_to_contents;
@@ -32,7 +32,13 @@ where T: Ord {
                 permute_original_to_contents[original_index] = contents_index;
             }
         }
-        &*self.contents
+    }
+    pub fn sorted_iter(&mut self) -> std::slice::Iter<T> {
+        self.presort();
+        self.contents.iter()
+    }
+    pub fn is_presorted(&self) -> bool {
+        self.is_sorted
     }
     pub fn get(&self, original_index: usize) -> Option<&T> {
         self.contents.get(self.permute_original_to_contents[original_index])
