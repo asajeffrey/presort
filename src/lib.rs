@@ -69,19 +69,19 @@ where T: Ord {
     /// If the vector is already definitely sorted, this is a constant time operation.
     pub fn presort(&mut self) {
         if !self.is_sorted {
-            let permute_contents_to_original = &mut *self.permute_contents_to_original;
-            let permute_original_to_contents = &mut *self.permute_original_to_contents;
-            let mut pairs: Vec<(T, usize)> = self.contents.drain(..)
-                .enumerate()
-                .map(|(contents_index, value)| (value, permute_contents_to_original[contents_index]))
-                .collect();
-            pairs.sort();
-            self.is_sorted = true;
-            for (contents_index, (value, original_index)) in pairs.drain(..).enumerate() {
-                self.contents.push(value);
-                permute_contents_to_original[contents_index] = original_index;
-                permute_original_to_contents[original_index] = contents_index;
+            let mut new_permute_contents_to_original = self.permute_contents_to_original.clone();
+            new_permute_contents_to_original.sort_by(
+                |&original_index_1, &original_index_2|
+                    self.contents[self.permute_original_to_contents[original_index_1]]
+                        .cmp(&self.contents[self.permute_original_to_contents[original_index_2]])
+            );
+            for (new_contents_index, &original_index) in new_permute_contents_to_original.iter().enumerate() {
+                let old_contents_index = self.permute_original_to_contents[original_index];
+                self.permute_original_to_contents.swap(self.permute_contents_to_original[new_contents_index], self.permute_contents_to_original[old_contents_index]);
+                self.permute_contents_to_original.swap(new_contents_index, old_contents_index);
+                self.contents.swap(new_contents_index, old_contents_index);
             }
+            self.is_sorted = true;
         }
         debug_assert!(self.invariant());
     }
