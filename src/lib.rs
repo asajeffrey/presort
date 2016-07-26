@@ -1,82 +1,85 @@
-//! A crate for presorted vectors.
+//! A crate for permuted vectors.
 //!
-//! Presorted vectors provide similar functionality to vectors, but are designed
-//! to make sorting cheap in the case that mutating the vector preserves sort
-//! order.
+//! Permuted vectors consist of a vector, together with a permutation of its elements.
+//! In particular, `vec.sort()` sorts the permutation, not the vector.
+//! This allows the vector to be updated, and
+//! if the updates preserve sort order, then the next `vec.sort()`
+//! will be O(n) rather than O(n log n).
 
-/// The type of presorted vectors.
+/// The type of permuted vectors.
 #[derive(Clone,Debug)]
-pub struct PresortedVec<T> {
+pub struct PermutedVec<T> {
     // The contents of the vector.
     contents: Vec<T>,
-    // A permutation `p`, such that `vec.get(p[i])` is the same as `vec.get_sorted(i)`.
-    permute_sorted_to_contents: Vec<usize>,
+    // The permutation
+    permutation: Vec<usize>,
     // The inverse permutation.
-    permute_contents_to_sorted: Vec<usize>,
+    inverse: Vec<usize>,
 }
 
-/// The type of sorted iterators over a presorted vector.
+/// The type of permuted iterators over a permuted vector.
 #[derive(Clone,Debug)]
-pub struct SortedIter<'a, T> where T: 'a {
+pub struct PermutedIter<'a, T> where T: 'a {
     // Where are we in the iterator
     index: usize,
     // The contents of the iterator
     contents: &'a[T],
-    // A permutation giving the sorting
-    permute_sorted_to_contents: &'a[usize],
+    // The permutation
+    permutation: &'a[usize],
 }
 
-impl<'a, T> Iterator for SortedIter<'a, T> where T: 'a {
+impl<'a, T> Iterator for PermutedIter<'a, T> where T: 'a {
     type Item = &'a T;
     fn next(&mut self) -> Option<&'a T> {
         let sorted_index = self.index;
         self.index = self.index + 1;
-        self.permute_sorted_to_contents.get(sorted_index).and_then(|&index| self.contents.get(index))
+        self.permutation.get(sorted_index).and_then(|&index| self.contents.get(index))
     }
 }
 
-impl<T> PresortedVec<T> where T: Ord {
+impl<T> PermutedVec<T> where T: Ord {
     /// Create a new, empty presorted vector.
-    pub fn new() -> PresortedVec<T> {
-        PresortedVec {
+    pub fn new() -> PermutedVec<T> {
+        PermutedVec {
             contents: Vec::new(),
-            permute_sorted_to_contents: Vec::new(),
-            permute_contents_to_sorted: Vec::new(),
+            permutation: Vec::new(),
+            inverse: Vec::new(),
         }
     }
 
-    fn to_sorted_iter(&self) -> SortedIter<T> {
-        SortedIter {
+    /// An iterator over the permuted vector
+    pub fn permuted_iter(&self) -> PermutedIter<T> {
+        PermutedIter {
             index: 0,
             contents: &self.contents,
-            permute_sorted_to_contents: &self.permute_sorted_to_contents,
+            permutation: &self.permutation,
         }
     }
 
-    /// Is the vector already sorted?
+    /// Is the permuted vector already sorted?
     pub fn is_sorted(&self) -> bool {
-        let iter_1 = self.to_sorted_iter();
-        let mut iter_2 = self.to_sorted_iter();
+        let iter_1 = self.permuted_iter();
+        let mut iter_2 = self.permuted_iter();
         iter_2.next();
         iter_1.zip(iter_2).all(|(value_1, value_2)|value_1 <= value_2)
     }
 
     /// The invariant maintained by the datatype
     fn invariant(&self) -> bool {
-        self.permute_contents_to_sorted.iter().enumerate().all(|(index, &sorted_index)|
-            self.permute_sorted_to_contents[sorted_index] == index
-        ) && self.permute_sorted_to_contents.iter().enumerate().all(|(sorted_index, &index)|
-            self.permute_contents_to_sorted[index] == sorted_index
+        self.inverse.iter().enumerate().all(|(index, &sorted_index)|
+            self.permutation[sorted_index] == index
+        ) && self.permutation.iter().enumerate().all(|(sorted_index, &index)|
+            self.inverse[index] == sorted_index
         )
     }
     
-    /// Sort the vector
-    pub fn presort(&mut self) {
+    /// Sort the permutation on the vector
+    pub fn sort(&mut self) {
         if !self.is_sorted() {
             let contents = &self.contents;
-            self.permute_sorted_to_contents.sort_by(|&index_1, &index_2| contents[index_1].cmp(&contents[index_2]));
-            for (sorted_index, &index) in self.permute_sorted_to_contents.iter().enumerate() {
-                self.permute_contents_to_sorted[index] = sorted_index;
+            self.permutation.sort_by(|&index_1, &index_2| contents[index_1].cmp(&contents[index_2]));
+            for (sorted_index, &index) in self.permutation.iter().enumerate() {
+                self.inverse[index] = sorted_index;
             }
             debug_assert!(self.invariant());
             debug_assert!(self.is_sorted());
@@ -84,11 +87,10 @@ impl<T> PresortedVec<T> where T: Ord {
     }
 
     /// A sorted iterator over the vector.
-    /// Makes the vector definitely sorted.
     /// If the vector is already definitely sorted, this is a constant time operation.
-    pub fn sorted_iter(&mut self) -> SortedIter<T> {
-        self.presort();
-        self.to_sorted_iter()
+    pub fn sorted_iter(&mut self) -> PermutedIter<T> {
+        self.sort();
+        self.permuted_iter()
     }
 
     /// Get the `i`th element of the vector.
@@ -107,8 +109,8 @@ impl<T> PresortedVec<T> where T: Ord {
     pub fn push(&mut self, value: T) {
         let index = self.contents.len();
         self.contents.push(value);
-        self.permute_sorted_to_contents.push(index);
-        self.permute_contents_to_sorted.push(index);
+        self.permutation.push(index);
+        self.inverse.push(index);
         debug_assert!(self.invariant());
     }
 
@@ -118,20 +120,20 @@ impl<T> PresortedVec<T> where T: Ord {
     }
 }
 
-impl<T> From<Vec<T>> for PresortedVec<T> {
-    fn from(vec: Vec<T>) -> PresortedVec<T> {
+impl<T> From<Vec<T>> for PermutedVec<T> {
+    fn from(vec: Vec<T>) -> PermutedVec<T> {
         let len = vec.len();
-        PresortedVec {
+        PermutedVec {
             contents: vec,
-            permute_sorted_to_contents: (0..len).collect(),
-            permute_contents_to_sorted: (0..len).collect(),
+            permutation: (0..len).collect(),
+            inverse: (0..len).collect(),
         }
     }
 }
 
 #[test]
 fn test_push() {
-    let mut vec = PresortedVec::new();
+    let mut vec = PermutedVec::new();
     assert_eq!(vec.len(), 0);
     assert_eq!(vec.get(0), None);
     assert_eq!(vec.is_sorted(), true);
@@ -190,7 +192,7 @@ fn test_push() {
 
 #[test]
 fn test_set() {
-    let mut vec = PresortedVec::from(vec![0, 30, 20, 10]);
+    let mut vec = PermutedVec::from(vec![0, 30, 20, 10]);
     assert_eq!(vec.len(), 4);
     assert_eq!(vec.get(0), Some(&0));
     assert_eq!(vec.get(1), Some(&30));
