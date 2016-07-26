@@ -37,7 +37,7 @@ impl<'a, T> Iterator for PermutedIter<'a, T> where T: 'a {
     }
 }
 
-impl<T> PermutedVec<T> where T: Ord {
+impl<T> PermutedVec<T> {
     /// Create a new, empty presorted vector.
     pub fn new() -> PermutedVec<T> {
         PermutedVec {
@@ -56,31 +56,46 @@ impl<T> PermutedVec<T> where T: Ord {
     }
 
     /// Is the permuted vector already sorted?
-    pub fn is_sorted(&self) -> bool {
+    pub fn is_sorted_by<F>(&self, f: &mut F) -> bool where F: FnMut(&T, &T) -> Ordering {
         let iter_1 = self.permuted_iter();
         let mut iter_2 = self.permuted_iter();
         iter_2.next();
-        iter_1.zip(iter_2).all(|(value_1, value_2)|value_1 <= value_2)
+        iter_1.zip(iter_2).all(|(value_1, value_2)| f(value_1, value_2) != Ordering::Greater)
+    }
+
+    /// Is the permuted vector already sorted?
+    pub fn is_sorted(&self) -> bool where T: Ord {
+        self.is_sorted_by(&mut |value_1, value_2| value_1.cmp(value_2))
     }
 
     /// Sort the permutation on the vector
-    pub fn sort(&mut self) {
-        if !self.is_sorted() {
+    pub fn sort_by<F>(&mut self, mut f: F) where F: FnMut(&T, &T) -> Ordering {
+        if !self.is_sorted_by(&mut f) {
             let contents = &self.contents;
             self.permutation.sort_by(|&index_1, &index_2|
-                match contents[index_1].cmp(&contents[index_2]) {
+                match f(&contents[index_1], &contents[index_2]) {
                     Ordering::Equal => index_1.cmp(&index_2),
                     ord => ord,
                 }
             );
-            debug_assert!(self.is_sorted());
+            debug_assert!(self.is_sorted_by(&mut f));
         }
     }
 
+    /// Sort the permutation on the vector
+    pub fn sort(&mut self) where T: Ord {
+        self.sort_by(|value_1, value_2| value_1.cmp(value_2))
+    }
+
     /// A sorted iterator over the vector.
-    /// If the vector is already definitely sorted, this is a constant time operation.
-    pub fn sorted_iter(&mut self) -> PermutedIter<T> {
+    pub fn sorted_iter(&mut self) -> PermutedIter<T> where T: Ord {
         self.sort();
+        self.permuted_iter()
+    }
+
+    /// A sorted iterator over the vector.
+    pub fn sorted_iter_by<F>(&mut self, f: F) -> PermutedIter<T> where F: FnMut(&T, &T) -> Ordering {
+        self.sort_by(f);
         self.permuted_iter()
     }
 
