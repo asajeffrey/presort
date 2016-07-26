@@ -46,34 +46,12 @@
             <a id="toggle-all-docs" href="javascript:void(0)" title="collapse all docs">
                 [<span class='inner'>&#x2212;</span>]
             </a>
-        </span><a id='src-0' class='srclink' href='../src/presort/lib.rs.html#1-234' title='goto source code'>[src]</a></span></h1>
+        </span><a id='src-0' class='srclink' href='../src/presort/lib.rs.html#1-232' title='goto source code'>[src]</a></span></h1>
 <div class='docblock'><p>A crate for presorted vectors.</p>
 
 <p>Presorted vectors provide similar functionality to vectors, but are designed
 to make sorting cheap in the case that mutating the vector preserves sort
 order.</p>
-
-<p>Define an update establishes sorting as:</p>
-
-<ul>
-<li><p><code>vec.presort()</code> establishes sorting.</p></li>
-<li><p><code>vec.sorted_iter()</code> establishes sorting.</p></li>
-</ul>
-
-<p>Define an update preserves sorting as:</p>
-
-<ul>
-<li><p><code>vec.set(i,v)</code> preserves sorting whenever, for any <code>j != i</code>,
-we have <code>vec[i] &lt; vec[j]</code> if any only if <code>v &lt; vec[j]</code>.</p></li>
-<li><p><code>vec.push(v)</code> preserves sorting whenever, for any <code>i</code>,
-we have <code>vec[i] &lt; v</code>.</p></li>
-</ul>
-
-<p>A presorted vector is definitely sorted when its update history contains
-an update which establishes sorting, and every subsequent update
-preserves sorting.</p>
-
-<p>For definitely sorted vectors, <code>vec.presort()</code> and <code>vec.sorted_iter()</code> are constant time functions.</p>
 </div><h2 id='structs' class='section-header'><a href="#structs">Structs</a></h2>
 <table>
                     <tr class=' module-item'>
@@ -81,6 +59,15 @@ preserves sorting.</p>
                                title='presort::PresortedVec'>PresortedVec</a></td>
                         <td class='docblock short'>
                              <p>The type of presorted vectors.</p>
+
+                        </td>
+                    </tr>
+                
+                    <tr class=' module-item'>
+                        <td><a class='struct' href='struct.SortedIter.html'
+                               title='presort::SortedIter'>SortedIter</a></td>
+                        <td class='docblock short'>
+                             <p>The type of sorted iterators over a presorted vector.</p>
 
                         </td>
                     </tr>

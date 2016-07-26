@@ -46,25 +46,24 @@
             <a id="toggle-all-docs" href="javascript:void(0)" title="collapse all docs">
                 [<span class='inner'>&#x2212;</span>]
             </a>
-        </span><a id='src-4' class='srclink' href='../src/presort/lib.rs.html#29-38' title='goto source code'>[src]</a></span></h1>
+        </span><a id='src-4' class='srclink' href='../src/presort/lib.rs.html#9-16' title='goto source code'>[src]</a></span></h1>
 <pre class='rust struct'>pub struct PresortedVec&lt;T&gt; {
     // some fields omitted
 }</pre><div class='docblock'><p>The type of presorted vectors.</p>
 </div><h2 id='methods'>Methods</h2><h3 class='impl'><code>impl&lt;T&gt; <a class='struct' href='../presort/struct.PresortedVec.html' title='presort::PresortedVec'>PresortedVec</a>&lt;T&gt; <span class='where'>where T: <a class='trait' href='https://doc.rust-lang.org/nightly/core/cmp/trait.Ord.html' title='core::cmp::Ord'>Ord</a></span></code></h3><div class='impl-items'><h4 id='method.new' class='method'><code>fn <a href='#method.new' class='fnname'>new</a>() -&gt; <a class='struct' href='../presort/struct.PresortedVec.html' title='presort::PresortedVec'>PresortedVec</a>&lt;T&gt;</code></h4>
 <div class='docblock'><p>Create a new, empty presorted vector.</p>
+</div><h4 id='method.is_sorted' class='method'><code>fn <a href='#method.is_sorted' class='fnname'>is_sorted</a>(&amp;self) -&gt; <a class='primitive' href='https://doc.rust-lang.org/nightly/std/primitive.bool.html'>bool</a></code></h4>
+<div class='docblock'><p>Is the vector already sorted?</p>
 </div><h4 id='method.presort' class='method'><code>fn <a href='#method.presort' class='fnname'>presort</a>(&amp;mut self)</code></h4>
-<div class='docblock'><p>Make the vector definitely sorted.
-If the vector is already definitely sorted, this is a constant time operation.</p>
-</div><h4 id='method.sorted_iter' class='method'><code>fn <a href='#method.sorted_iter' class='fnname'>sorted_iter</a>(&amp;mut self) -&gt; <a class='struct' href='https://doc.rust-lang.org/nightly/core/slice/struct.Iter.html' title='core::slice::Iter'>Iter</a>&lt;T&gt;</code></h4>
+<div class='docblock'><p>Sort the vector</p>
+</div><h4 id='method.sorted_iter' class='method'><code>fn <a href='#method.sorted_iter' class='fnname'>sorted_iter</a>(&amp;mut self) -&gt; <a class='struct' href='../presort/struct.SortedIter.html' title='presort::SortedIter'>SortedIter</a>&lt;T&gt;</code></h4>
 <div class='docblock'><p>A sorted iterator over the vector.
 Makes the vector definitely sorted.
 If the vector is already definitely sorted, this is a constant time operation.</p>
-</div><h4 id='method.is_presorted' class='method'><code>fn <a href='#method.is_presorted' class='fnname'>is_presorted</a>(&amp;self) -&gt; <a class='primitive' href='https://doc.rust-lang.org/nightly/std/primitive.bool.html'>bool</a></code></h4>
-<div class='docblock'><p>Check to see if the vector is definitely sorted.</p>
-</div><h4 id='method.get' class='method'><code>fn <a href='#method.get' class='fnname'>get</a>(&amp;self, original_index: <a class='primitive' href='https://doc.rust-lang.org/nightly/std/primitive.usize.html'>usize</a>) -&gt; <a class='enum' href='https://doc.rust-lang.org/nightly/core/option/enum.Option.html' title='core::option::Option'>Option</a>&lt;&amp;T&gt;</code></h4>
+</div><h4 id='method.get' class='method'><code>fn <a href='#method.get' class='fnname'>get</a>(&amp;self, index: <a class='primitive' href='https://doc.rust-lang.org/nightly/std/primitive.usize.html'>usize</a>) -&gt; <a class='enum' href='https://doc.rust-lang.org/nightly/core/option/enum.Option.html' title='core::option::Option'>Option</a>&lt;&amp;T&gt;</code></h4>
 <div class='docblock'><p>Get the <code>i</code>th element of the vector.
 Returns <code>None</code> if the vector contains fewer than <code>i</code> elements.</p>
-</div><h4 id='method.set' class='method'><code>fn <a href='#method.set' class='fnname'>set</a>(&amp;mut self, original_index: <a class='primitive' href='https://doc.rust-lang.org/nightly/std/primitive.usize.html'>usize</a>, value: T)</code></h4>
+</div><h4 id='method.set' class='method'><code>fn <a href='#method.set' class='fnname'>set</a>(&amp;mut self, index: <a class='primitive' href='https://doc.rust-lang.org/nightly/std/primitive.usize.html'>usize</a>, value: T)</code></h4>
 <div class='docblock'><p>Set the <code>i</code>th element of the vector.
 Panics if the vector contains fewer than <code>i</code> elements.</p>
 </div><h4 id='method.push' class='method'><code>fn <a href='#method.push' class='fnname'>push</a>(&amp;mut self, value: T)</code></h4>
