@@ -9,6 +9,9 @@
 #[cfg(feature = "serde")]
 extern crate serde;
    
+#[cfg(feature = "heapsize")]
+extern crate heapsize;
+   
 use std::cmp::Ordering;
 
 /// The type of permuted vectors.
@@ -161,6 +164,15 @@ impl<T> serde::Deserialize for PermutedVec<T>
     }
 }
 
+#[cfg(feature = "heapsize")]
+impl<T> heapsize::HeapSizeOf for PermutedVec<T>
+    where T: heapsize::HeapSizeOf
+{
+    fn heap_size_of_children(&self) -> usize {
+        self.contents.heap_size_of_children() + self.permutation.heap_size_of_children()
+    }
+}
+
 #[test]
 fn test_push() {
     let mut vec = PermutedVec::new();
@@ -274,3 +286,4 @@ fn test_serialize() {
 
     assert_eq!(original, roundtrip);
 }
+
