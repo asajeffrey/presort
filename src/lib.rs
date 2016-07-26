@@ -49,6 +49,22 @@ where T: Ord {
         }
     }
 
+    /// The invariant maintained by the datatype
+    fn invariant(&self) -> bool {
+        if self.is_sorted {
+            let iter_1 = self.contents.iter();
+            let mut iter_2 = self.contents.iter();
+            iter_2.next();
+            for (value_1, value_2) in iter_1.zip(iter_2) {
+                if value_1 > value_2 { return false; }
+            }
+        }
+        for (contents_index, &original_index) in self.permute_contents_to_original.iter().enumerate() {
+            if self.permute_original_to_contents[original_index] != contents_index { return false; }
+        }
+        return true;
+    }
+
     /// Make the vector definitely sorted.
     /// If the vector is already definitely sorted, this is a constant time operation.
     pub fn presort(&mut self) {
@@ -67,6 +83,7 @@ where T: Ord {
                 permute_original_to_contents[original_index] = contents_index;
             }
         }
+        debug_assert!(self.invariant());
     }
 
     /// A sorted iterator over the vector.
@@ -99,6 +116,7 @@ where T: Ord {
             self.contents.get(contents_index.wrapping_sub(1)).map(|before| before <= &value).unwrap_or(true) &&
             self.contents.get(contents_index.wrapping_add(1)).map(|after| &value <= after).unwrap_or(true);
         self.contents[contents_index] = value;
+        debug_assert!(self.invariant());
     }
 
     /// Append an element to the end of the vector.
@@ -111,6 +129,7 @@ where T: Ord {
         self.contents.push(value);
         self.permute_original_to_contents.push(contents_index);
         self.permute_contents_to_original.push(original_index);
+        debug_assert!(self.invariant());
     }
 
     /// The length of the vector.
