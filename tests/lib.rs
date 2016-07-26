@@ -13,8 +13,9 @@ fn tree<T>(data: T, children: Vec<Tree<T>>) -> Tree<T> {
     Box::new(TreeNode { data: data, children: children })
 }
 
-fn dump<T: Ord>(tree: &Tree<T>, vec: &mut PresortedVec<T>) {
-    panic!("Not done yet");
+fn dump<T: Clone+Ord>(tree: &Tree<T>, vec: &mut PresortedVec<T>) {
+    vec.push(tree.data.clone());
+    for ref kid in &tree.children { dump(kid, vec); }
 }
 
 #[test]
