@@ -6,6 +6,8 @@
 //! if the updates preserve sort order, then the next `vec.sort()`
 //! will be O(n) rather than O(n log n).
 
+use std::cmp::Ordering;
+
 /// The type of permuted vectors.
 #[derive(Clone,Debug)]
 pub struct PermutedVec<T> {
@@ -65,7 +67,12 @@ impl<T> PermutedVec<T> where T: Ord {
     pub fn sort(&mut self) {
         if !self.is_sorted() {
             let contents = &self.contents;
-            self.permutation.sort_by(|&index_1, &index_2| (&contents[index_1], index_1).cmp(&(&contents[index_2], index_2)));
+            self.permutation.sort_by(|&index_1, &index_2|
+                match contents[index_1].cmp(&contents[index_2]) {
+                    Ordering::Equal => index_1.cmp(&index_2),
+                    ord => ord,
+                }
+            );
             debug_assert!(self.is_sorted());
         }
     }
