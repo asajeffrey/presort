@@ -6,10 +6,13 @@
 //! if the updates preserve sort order, then the next `vec.sort()`
 //! will be O(n) rather than O(n log n).
 
+#[cfg(feature = "serde")]
+extern crate serde;
+   
 use std::cmp::Ordering;
 
 /// The type of permuted vectors.
-#[derive(Clone,Debug)]
+#[derive(Clone,Debug,Eq,PartialEq)]
 pub struct PermutedVec<T> {
     // The contents of the vector.
     contents: Vec<T>,
@@ -134,6 +137,30 @@ impl<T> From<Vec<T>> for PermutedVec<T> {
     }
 }
 
+
+#[cfg(feature = "serde")]
+impl<T> serde::Serialize for PermutedVec<T>
+    where T: serde::Serialize
+{
+    fn serialize<S>(&self, serializer: &mut S) -> Result<(), S::Error>
+        where S: serde::Serializer
+    {
+        (&self.contents, &self.permutation).serialize(serializer)
+    }
+}
+
+#[cfg(feature = "serde")]
+impl<T> serde::Deserialize for PermutedVec<T>
+    where T: serde::Deserialize
+{
+    fn deserialize<D>(deserializer: &mut D) -> Result<PermutedVec<T>, D::Error>
+        where D: serde::Deserializer
+    {
+        let (contents, permutation) = try!(serde::Deserialize::deserialize(deserializer));
+        Ok(PermutedVec { contents: contents, permutation: permutation })
+    }
+}
+
 #[test]
 fn test_push() {
     let mut vec = PermutedVec::new();
@@ -234,4 +261,16 @@ fn test_set() {
     assert_eq!(vec.get(4), None);
     assert_eq!(vec.is_sorted(), false);
     assert_eq!(vec.sorted_iter().collect::<Vec<&usize>>(), vec![&0, &1, &10, &30]);
+}
+
+#[cfg(feature = "serde_json")]
+#[test]
+fn test_serialize() {
+    extern crate serde_json;
+    
+    let original = PermutedVec::from(vec![0,3,2,1]);
+    let serialized = serde_json::to_string(&original).unwrap();
+    let roundtrip: PermutedVec<usize> = serde_json::from_str(&serialized).unwrap();
+
+    assert_eq!(original, roundtrip);
 }

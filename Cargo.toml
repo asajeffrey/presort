@@ -3,3 +3,7 @@ name = "presort"
 version = "0.0.1"
 authors = ["ajeffrey@mozilla.com"]
 license = "MPL-2.0"
+
+[dependencies]
+serde = { version = "0.7", optional = true }
+serde_json = { version = "0.7", optional = true }
