@@ -13,8 +13,6 @@ pub struct PermutedVec<T> {
     contents: Vec<T>,
     // The permutation
     permutation: Vec<usize>,
-    // The inverse permutation.
-    inverse: Vec<usize>,
 }
 
 /// The type of permuted iterators over a permuted vector.
@@ -43,7 +41,6 @@ impl<T> PermutedVec<T> where T: Ord {
         PermutedVec {
             contents: Vec::new(),
             permutation: Vec::new(),
-            inverse: Vec::new(),
         }
     }
 
@@ -64,24 +61,11 @@ impl<T> PermutedVec<T> where T: Ord {
         iter_1.zip(iter_2).all(|(value_1, value_2)|value_1 <= value_2)
     }
 
-    /// The invariant maintained by the datatype
-    fn invariant(&self) -> bool {
-        self.inverse.iter().enumerate().all(|(index, &sorted_index)|
-            self.permutation[sorted_index] == index
-        ) && self.permutation.iter().enumerate().all(|(sorted_index, &index)|
-            self.inverse[index] == sorted_index
-        )
-    }
-    
     /// Sort the permutation on the vector
     pub fn sort(&mut self) {
         if !self.is_sorted() {
             let contents = &self.contents;
-            self.permutation.sort_by(|&index_1, &index_2| contents[index_1].cmp(&contents[index_2]));
-            for (sorted_index, &index) in self.permutation.iter().enumerate() {
-                self.inverse[index] = sorted_index;
-            }
-            debug_assert!(self.invariant());
+            self.permutation.sort_by(|&index_1, &index_2| (&contents[index_1], index_1).cmp(&(&contents[index_2], index_2)));
             debug_assert!(self.is_sorted());
         }
     }
@@ -110,8 +94,6 @@ impl<T> PermutedVec<T> where T: Ord {
         let index = self.contents.len();
         self.contents.push(value);
         self.permutation.push(index);
-        self.inverse.push(index);
-        debug_assert!(self.invariant());
     }
 
     /// The length of the vector.
@@ -126,7 +108,6 @@ impl<T> From<Vec<T>> for PermutedVec<T> {
         PermutedVec {
             contents: vec,
             permutation: (0..len).collect(),
-            inverse: (0..len).collect(),
         }
     }
 }
