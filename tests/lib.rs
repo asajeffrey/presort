@@ -31,6 +31,7 @@ trait IncTree<T: PartialEq + Clone> {
 	fn get_child(&self, child_num: usize) -> Tree<T>;
 	fn set_child(&self, child_num: usize, child: Tree<T>);
 	fn push_child(&self, child: Tree<T>);
+	fn pop_child(&self) -> Option<Tree<T>>;
 }
 
 impl<T: PartialEq + Clone> IncTree<T> for Tree<T> {
@@ -128,11 +129,23 @@ impl<T: PartialEq + Clone> IncTree<T> for Tree<T> {
 		let nodes;
 		{
 			let mut tree = self.borrow_mut();
-			nodes = child.borrow().decendent_count + 1;
+			nodes = 1 + child.borrow().decendent_count;
 			index = tree.children.len();
 			tree.children.push(child);
 		}
 		self.mark_recount(index, nodes);
+	}
+
+	fn pop_child(&self) -> Option<Tree<T>> {
+		//assume all new values are dirty
+		let child = self.borrow_mut().children.pop();
+		let nodes = match child {
+			None => 0,
+			Some(ref c) => 1 + c.borrow().decendent_count,
+		};
+		let index = std::cmp::max(self.borrow().children.len(),0);
+		self.mark_recount(index, -nodes);
+		child
 	}
 }
 
@@ -260,6 +273,16 @@ fn test_update() {
     assert_eq!(
     	vec.sorted_iter().collect::<Vec<&usize>>(),
     	vec![&1,&25,&37,&42,&47,&53,&57,&63,&77,&100,&105]
+    );
+
+    println!("start pop branch");
+    let branch = main_tree.get_child(2).get_child(2);
+    branch.pop_child();
+    update(&main_tree, 0, &mut vec);
+    println!("finished pop branch");
+    assert_eq!(
+    	vec.sorted_iter().collect::<Vec<&usize>>(),
+    	vec![&1,&25,&37,&42,&47,&53,&57,&63,&77]
     );
 
 }
