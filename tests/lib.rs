@@ -57,23 +57,15 @@ impl<T: PartialEq + Clone> IncTree<T> for Tree<T> {
 	}
 
 	fn dirty_parents(&self){
-		let mut tree = self.borrow_mut();
-		while let Some((ref parent,_)) = tree.parent {
-			tree = parent.borrow_mut();
-			tree.dirty_child = true;
+		let mut parent = None;
+		if let Some((ref p_tree,_)) = self.borrow().parent {
+			parent = Some(p_tree.clone()); // Rc clone
+		}
+		if let Some(parent) = parent {
+			parent.borrow_mut().dirty_child = true;
+			parent.dirty_parents();
 		}
 	}
-
-	// fn dirty_parents(&self){
-	// 	let mut parent = None;
-	// 	if let Some((ref p_tree,_)) = self.borrow().parent {
-	// 		parent = Some(p_tree.clone()); // Rc clone
-	// 	}
-	// 	if let Some(parent) = parent {
-	// 		parent.borrow_mut().dirty_child = true;
-	// 		parent.dirty_parents();
-	// 	}
-	// }
 
 	//when a child changes number of decendents, we mark it in
 	//this tree and bubble it up. This does not effect `decendent_count`,
@@ -93,10 +85,12 @@ impl<T: PartialEq + Clone> IncTree<T> for Tree<T> {
 	}
 
 	fn set_data(&self, data: T) {
-		let mut tree = self.borrow_mut();
-		if tree.data == data {return}
-		tree.data = data;
-		tree.dirty_val = true;
+		{
+			let mut tree = self.borrow_mut();
+			if tree.data == data {return}
+			tree.data = data;
+			tree.dirty_val = true;
+		}
 		self.dirty_parents();
 	}
 
@@ -122,11 +116,11 @@ impl<T: PartialEq + Clone> IncTree<T> for Tree<T> {
 	}
 
 	fn push_child(&self, child: Tree<T>) {
-		let mut tree = self.borrow_mut();
 		//assume all new values are dirty
 		child.dirty_decendents();
-		child.borrow_mut().parent = Some((self.clone(), tree.children.len())); //Rc clone
+		child.borrow_mut().parent = Some((self.clone(), self.borrow().children.len())); //Rc clone
 		child.dirty_parents();
+		let mut tree = self.borrow_mut();
 		tree.decendent_count += child.borrow().decendent_count + 1;
 		tree.children.push(child);
 		if let Some((ref parent, index)) = tree.parent {
@@ -150,23 +144,25 @@ fn update<T: Clone>(tree: &Tree<T>, start_index: usize, vec: &mut PermutedVec<T>
 	if tree.dirty_val {
 		vec.set(index, tree.data.clone());
 		tree.dirty_val = false;
-		index += 1;
 	}
 	if !tree.dirty_child {return}
+	index += 1;
 
 	//all the children with unchanged decendent counts
 	for counted_kid in 0..tree.stable_children{
 		update(&tree.children[counted_kid], index, vec);
-		index += tree.children[counted_kid].borrow_mut().decendent_count;
+		index += 1 + tree.children[counted_kid].borrow_mut().decendent_count;
 	}
-	//first changed child may have unchanged decendents
-	let first_changed = &tree.children[tree.stable_children];
-	update(&first_changed, index, vec);
-	index += first_changed.borrow().decendent_count;
-	//dump all the rest
-	vec.truncate(index);
-	for uncounted_kid in (tree.stable_children + 1)..tree.children.len() {
-		dump(&tree.children[uncounted_kid], vec);
+	if tree.stable_children < tree.children.len() {
+		//first changed child may have unchanged decendents
+		let first_changed = &tree.children[tree.stable_children];
+		update(&first_changed, index, vec);
+		index += 1 + first_changed.borrow().decendent_count;
+		//dump all the rest
+		vec.truncate(index);
+		for uncounted_kid in (tree.stable_children + 1)..tree.children.len() {
+			dump(&tree.children[uncounted_kid], vec);
+		}
 	}
 }
 
@@ -180,7 +176,7 @@ fn test_tree() {
 
 #[test]
 fn test_update() {
-	let mut main_tree = Tree::new_node(37);
+	let main_tree = Tree::new_node(37);
 	main_tree.push_child(Tree::new_node(42));
 	main_tree.push_child(Tree::new_node(20));
 	main_tree.push_child(Tree::new_node(63));
