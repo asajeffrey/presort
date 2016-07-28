@@ -124,6 +124,12 @@ impl<T> PermutedVec<T> {
         self.permutation.push(index);
     }
 
+    /// Truncate this vector, resetting the sort.
+    pub fn truncate(&mut self, len: usize) {
+        self.contents.truncate(len);
+        self.permutation = (0..len).collect();
+    }
+
     /// The length of the vector.
     pub fn len(&self) -> usize {
         self.contents.len()
