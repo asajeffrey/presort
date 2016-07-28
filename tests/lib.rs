@@ -15,7 +15,7 @@ struct TreeNode<T> {
 	parent: Option<(Tree<T>, usize)>,
 	//this node's data
     data: T,
-    decendent_count: usize,
+    decendent_count: i32,
     children: Vec<Tree<T>>,
 }
 
@@ -25,7 +25,7 @@ trait IncTree<T: PartialEq + Clone> {
     fn new_node(data: T) -> Tree<T>;
 	fn dirty_decendents(&self);
 	fn dirty_parents(&self);
-	fn mark_recount(&self, child_index: usize);
+	fn mark_recount(&self, child_index: usize, new_nodes: i32);
 	fn get_data(&self) -> T;
 	fn set_data(&self, data: T);
 	fn get_child(&self, child_num: usize) -> Tree<T>;
@@ -37,7 +37,7 @@ impl<T: PartialEq + Clone> IncTree<T> for Tree<T> {
 	fn new_node(data: T) -> Tree<T>{
 		Rc::new(RefCell::new(TreeNode {
 			dirty_val: true,
-			dirty_child: true,
+			dirty_child: false,
 			stable_children: 0,
 			parent: None,
 			data: data,
@@ -68,15 +68,16 @@ impl<T: PartialEq + Clone> IncTree<T> for Tree<T> {
 	}
 
 	//when a child changes number of decendents, we mark it in
-	//this tree and bubble it up. This does not effect `decendent_count`,
-	//it only effects `stable_children`
-	fn mark_recount(&self, child_index: usize) {
+	//this tree and bubble it up. This updates both
+	//`decendent_count` and `stable_children`
+	fn mark_recount(&self, child_index: usize, new_nodes: i32) {
 		let mut tree = self.borrow_mut();
+		tree.decendent_count += new_nodes;
 		if tree.stable_children > child_index {
 			tree.stable_children = child_index;
-			if let Some((ref parent, index)) = tree.parent {
-				parent.mark_recount(index)
-			}
+		}
+		if let Some((ref parent, index)) = tree.parent {
+			parent.mark_recount(index, new_nodes)
 		}
 	}
 
@@ -104,15 +105,18 @@ impl<T: PartialEq + Clone> IncTree<T> for Tree<T> {
 		child.dirty_decendents();
 		child.borrow_mut().parent = Some((self.clone(), child_num)); //Rc clone
 		child.dirty_parents();
-		let old_child = tree.children.swap_remove(child_num);
-		//handle a change in the number of decendents
-		if old_child.borrow().decendent_count != child.borrow().decendent_count {
-			tree.decendent_count -= child.borrow().decendent_count;
-			tree.decendent_count += child.borrow().decendent_count;
-			child.borrow_mut().stable_children = 0;
-			self.mark_recount(child_num);
+		let mut nodes: i32 = 0;
+		{
+			//handle a change in the number of decendents
+			let ref old_child = tree.children[child_num].borrow();
+			if old_child.decendent_count != child.borrow().decendent_count {
+				nodes -= old_child.decendent_count;
+				nodes += child.borrow().decendent_count;
+				child.borrow_mut().stable_children = 0;
+				self.mark_recount(child_num, nodes);
+			}
 		}
-		tree.children.push(child);
+		tree.children[child_num] = child;
 	}
 
 	fn push_child(&self, child: Tree<T>) {
@@ -120,12 +124,15 @@ impl<T: PartialEq + Clone> IncTree<T> for Tree<T> {
 		child.dirty_decendents();
 		child.borrow_mut().parent = Some((self.clone(), self.borrow().children.len())); //Rc clone
 		child.dirty_parents();
-		let mut tree = self.borrow_mut();
-		tree.decendent_count += child.borrow().decendent_count + 1;
-		tree.children.push(child);
-		if let Some((ref parent, index)) = tree.parent {
-			parent.mark_recount(index);
+		let index;
+		let nodes;
+		{
+			let mut tree = self.borrow_mut();
+			nodes = child.borrow().decendent_count + 1;
+			index = tree.children.len();
+			tree.children.push(child);
 		}
+		self.mark_recount(index, nodes);
 	}
 }
 
@@ -142,7 +149,11 @@ fn update<T: Clone>(tree: &Tree<T>, start_index: usize, vec: &mut PermutedVec<T>
 	let mut tree = tree.borrow_mut();
 	let mut index = start_index;
 	if tree.dirty_val {
-		vec.set(index, tree.data.clone());
+		if vec.len() <= index {
+			vec.push(tree.data.clone())
+		} else {
+			vec.set(index, tree.data.clone());			
+		}
 		tree.dirty_val = false;
 	}
 	if !tree.dirty_child {return}
@@ -151,17 +162,22 @@ fn update<T: Clone>(tree: &Tree<T>, start_index: usize, vec: &mut PermutedVec<T>
 	//all the children with unchanged decendent counts
 	for counted_kid in 0..tree.stable_children{
 		update(&tree.children[counted_kid], index, vec);
-		index += 1 + tree.children[counted_kid].borrow_mut().decendent_count;
+		index += 1 + tree.children[counted_kid].borrow_mut().decendent_count as usize;
 	}
 	if tree.stable_children < tree.children.len() {
-		//first changed child may have unchanged decendents
-		let first_changed = &tree.children[tree.stable_children];
-		update(&first_changed, index, vec);
-		index += 1 + first_changed.borrow().decendent_count;
-		//dump all the rest
-		vec.truncate(index);
-		for uncounted_kid in (tree.stable_children + 1)..tree.children.len() {
-			dump(&tree.children[uncounted_kid], vec);
+		{
+			//first changed child may have unchanged decendents
+			let first_changed = &tree.children[tree.stable_children];
+			update(&first_changed, index, vec);
+			index += 1 + first_changed.borrow().decendent_count as usize;
+		}
+		//dump any additional children
+		if (tree.stable_children + 1) < tree.children.len() {
+			vec.truncate(index);
+			for uncounted_kid in (tree.stable_children + 1)..tree.children.len() {
+				dump(&tree.children[uncounted_kid], vec);
+			}
+			tree.stable_children = tree.children.len();
 		}
 	}
 }
@@ -176,15 +192,74 @@ fn test_tree() {
 
 #[test]
 fn test_update() {
+	println!("start first dump");
 	let main_tree = Tree::new_node(37);
 	main_tree.push_child(Tree::new_node(42));
 	main_tree.push_child(Tree::new_node(20));
 	main_tree.push_child(Tree::new_node(63));
 	let mut vec = PermutedVec::new();
 	dump(&main_tree, &mut vec);
+	println!("finished first dump");
     assert_eq!(vec.sorted_iter().collect::<Vec<&usize>>(), vec![&20,&37,&42,&63]);
 
+	println!("start first update");
     main_tree.get_child(1).set_data(25);
     update(&main_tree, 0, &mut vec);
+	println!("finished first update");
     assert_eq!(vec.sorted_iter().collect::<Vec<&usize>>(), vec![&25,&37,&42,&63]);
+
+	println!("start add branch");
+    let branch = main_tree.get_child(2);
+    branch.push_child(Tree::new_node(47));
+    branch.push_child(Tree::new_node(53));
+    branch.push_child(Tree::new_node(61));
+    branch.push_child(Tree::new_node(57));
+    update(&main_tree, 0, &mut vec);
+	println!("finished add branch");
+    assert_eq!(
+    	vec.sorted_iter().collect::<Vec<&usize>>(),
+    	vec![&25,&37,&42,&47,&53,&57,&61,&63]
+    );
+
+	println!("start update branch");
+    branch.get_child(2).set_data(77);
+    update(&main_tree, 0, &mut vec);
+	println!("finished update branch");
+    assert_eq!(
+    	vec.sorted_iter().collect::<Vec<&usize>>(),
+    	vec![&25,&37,&42,&47,&53,&57,&63,&77]
+    );
+
+    println!("start early insertion");
+    let branch = main_tree.get_child(1);
+    branch.push_child(Tree::new_node(1));
+    update(&main_tree, 0, &mut vec);
+    println!("finished early insertion");
+    assert_eq!(
+    	vec.sorted_iter().collect::<Vec<&usize>>(),
+    	vec![&1,&25,&37,&42,&47,&53,&57,&63,&77]
+    );
+
+    println!("start deep add");
+    let branch = main_tree.get_child(2).get_child(2);
+    let new_branch = Tree::new_node(100);
+    new_branch.push_child(Tree::new_node(101));
+    branch.push_child(new_branch);
+    update(&main_tree, 0, &mut vec);
+    println!("finished deep add");
+    assert_eq!(
+    	vec.sorted_iter().collect::<Vec<&usize>>(),
+    	vec![&1,&25,&37,&42,&47,&53,&57,&63,&77,&100,&101]
+    );
+
+    println!("start deep edit");
+    let branch = branch.get_child(0).get_child(0);
+    branch.set_data(105);
+    update(&main_tree, 0, &mut vec);
+    println!("finished deep edit");
+    assert_eq!(
+    	vec.sorted_iter().collect::<Vec<&usize>>(),
+    	vec![&1,&25,&37,&42,&47,&53,&57,&63,&77,&100,&105]
+    );
+
 }

@@ -114,20 +114,25 @@ impl<T> PermutedVec<T> {
     /// Set the `i`th element of the vector.
     /// Panics if the vector contains fewer than `i` elements.
     pub fn set(&mut self, index: usize, value: T) {
+        //println!("vec set index {:?}", index);
         self.contents[index] = value;
     }
 
     /// Append an element to the end of the vector.
     pub fn push(&mut self, value: T) {
+        //println!("vec push index {:?}", self.len());
         let index = self.contents.len();
         self.contents.push(value);
         self.permutation.push(index);
     }
 
-    /// Truncate this vector, resetting the sort.
+    /// Truncate this vector and reset the sort if necessary.
     pub fn truncate(&mut self, len: usize) {
-        self.contents.truncate(len);
-        self.permutation = (0..len).collect();
+        //println!("vec truncate to {:?}", len);
+        if len < self.len() {
+            self.contents.truncate(len);
+            self.permutation = (0..len).collect();   
+        }
     }
 
     /// The length of the vector.
