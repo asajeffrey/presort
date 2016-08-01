@@ -24,7 +24,7 @@ type Tree<T> = Rc<RefCell<TreeNode<T>>>;
 trait IncTree<T: PartialEq + Clone> {
     fn new_node(data: T) -> Tree<T>;
 	fn dirty_decendents(&self);
-	fn dirty_parents(&self);
+	fn dirty_ancestors(&self);
 	fn mark_recount(&self, child_index: usize, new_nodes: i32);
 	fn get_data(&self) -> T;
 	fn set_data(&self, data: T);
@@ -57,14 +57,14 @@ impl<T: PartialEq + Clone> IncTree<T> for Tree<T> {
 		}
 	}
 
-	fn dirty_parents(&self){
+	fn dirty_ancestors(&self){
 		let mut parent = None;
 		if let Some((ref p_tree,_)) = self.borrow().parent {
 			parent = Some(p_tree.clone()); // Rc clone
 		}
 		if let Some(parent) = parent {
 			parent.borrow_mut().dirty_descendant = true;
-			parent.dirty_parents();
+			parent.dirty_ancestors();
 		}
 	}
 
@@ -93,7 +93,7 @@ impl<T: PartialEq + Clone> IncTree<T> for Tree<T> {
 			tree.data = data;
 			tree.dirty_val = true;
 		}
-		self.dirty_parents();
+		self.dirty_ancestors();
 	}
 
 	fn get_child(&self, child_num: usize) -> Tree<T> {
@@ -105,7 +105,7 @@ impl<T: PartialEq + Clone> IncTree<T> for Tree<T> {
 		//assume all new values are dirty
 		child.dirty_decendents();
 		child.borrow_mut().parent = Some((self.clone(), child_num)); //Rc clone
-		child.dirty_parents();
+		child.dirty_ancestors();
 		let mut nodes: i32 = 0;
 		{
 			//handle a change in the number of decendents
@@ -124,7 +124,7 @@ impl<T: PartialEq + Clone> IncTree<T> for Tree<T> {
 		//assume all new values are dirty
 		child.dirty_decendents();
 		child.borrow_mut().parent = Some((self.clone(), self.borrow().children.len())); //Rc clone
-		child.dirty_parents();
+		child.dirty_ancestors();
 		let index;
 		let nodes;
 		{
