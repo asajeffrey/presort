@@ -45,7 +45,6 @@ impl<T: PartialEq + Clone> IncTree<T> for Tree<T> {
     }
 
     //sets dirty flags on all children and parents
-    //set the new parent first for proper effect
     fn flag_as_new(&self) {
         let mut tree = self.borrow_mut();
         tree.dirty_val = true;
@@ -53,7 +52,6 @@ impl<T: PartialEq + Clone> IncTree<T> for Tree<T> {
         for kid in &tree.children {
             kid.flag_as_new();
         }
-        tree.flag_as_updated();
     }
 
     //sets dirty flags on self and parents
@@ -84,14 +82,16 @@ impl<T: PartialEq + Clone> IncTree<T> for Tree<T> {
     }
 
     fn set_child(&self, child_num: usize, child: Tree<T>) {
-        child.borrow_mut().parent = Some((self.clone(), child_num)); //Rc clone
         child.flag_as_new();
+        child.borrow_mut().parent = Some((self.clone(), child_num)); //Rc clone
+        child.flag_as_updated();
         self.borrow_mut().children[child_num] = child;
     }
 
     fn push_child(&self, child: Tree<T>) {
-        child.borrow_mut().parent = Some((self.clone(), self.borrow().children.len())); //Rc clone
         child.flag_as_new();
+        child.borrow_mut().parent = Some((self.clone(), self.borrow().children.len())); //Rc clone
+        child.flag_as_updated();
         self.borrow_mut().children.push(child);
     }
 
