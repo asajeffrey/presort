@@ -57,15 +57,12 @@ impl<T: PartialEq + Clone> IncTree<T> for Tree<T> {
 		}
 	}
 
-	fn dirty_ancestors(&self){
-		let mut parent = None;
-		if let Some((ref p_tree,_)) = self.borrow().parent {
-			parent = Some(p_tree.clone()); // Rc clone
-		}
-		if let Some(parent) = parent {
-			parent.borrow_mut().dirty_descendant = true;
-			parent.dirty_ancestors();
-		}
+        fn dirty_ancestors(&self){
+                let mut node = self.borrow_mut();
+                node.dirty_descendant = true;
+                if let Some((ref parent, _)) = node.parent {
+                    parent.dirty_ancestors();
+                }
 	}
 
 	//when a child changes number of decendents, we mark it in
