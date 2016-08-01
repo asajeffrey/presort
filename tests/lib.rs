@@ -7,8 +7,8 @@ use std::cell::RefCell;
 struct TreeNode<T> {
 	//whether this node's data has changed
 	dirty_val: bool,
-	//whether some child node's data has changed
-	dirty_child: bool,
+	//whether some descendant is dirty
+	dirty_descendant: bool,
 	//number of children with unchanged decendent counts
 	stable_children: usize,
 	//parent and index in parent's child vec
@@ -38,7 +38,7 @@ impl<T: PartialEq + Clone> IncTree<T> for Tree<T> {
 	fn new_node(data: T) -> Tree<T>{
 		Rc::new(RefCell::new(TreeNode {
 			dirty_val: true,
-			dirty_child: false,
+			dirty_descendant: false,
 			stable_children: 0,
 			parent: None,
 			data: data,
@@ -51,7 +51,7 @@ impl<T: PartialEq + Clone> IncTree<T> for Tree<T> {
 	fn dirty_decendents(&self) {
 		let mut tree = self.borrow_mut();
 		tree.dirty_val = true;
-		tree.dirty_child = true;
+		tree.dirty_descendant = true;
 		for kid in &tree.children {
 			kid.dirty_decendents();
 		}
@@ -63,7 +63,7 @@ impl<T: PartialEq + Clone> IncTree<T> for Tree<T> {
 			parent = Some(p_tree.clone()); // Rc clone
 		}
 		if let Some(parent) = parent {
-			parent.borrow_mut().dirty_child = true;
+			parent.borrow_mut().dirty_descendant = true;
 			parent.dirty_parents();
 		}
 	}
@@ -154,7 +154,7 @@ fn dump<T: Clone>(tree: &Tree<T>, vec: &mut PermutedVec<T>) {
     vec.push(tree.data.clone());
     tree.dirty_val = false;
     for kid in &tree.children { dump(&kid, vec); }
-    tree.dirty_child = false;
+    tree.dirty_descendant = false;
     tree.stable_children = tree.children.len();
 }
 
@@ -169,7 +169,7 @@ fn update<T: Clone>(tree: &Tree<T>, start_index: usize, vec: &mut PermutedVec<T>
 		}
 		tree.dirty_val = false;
 	}
-	if !tree.dirty_child {return}
+	if !tree.dirty_descendant {return}
 	index += 1;
 
 	//all the children with unchanged decendent counts
