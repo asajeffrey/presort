@@ -7,7 +7,7 @@ use std::cell::RefCell;
 struct TreeNode<T> {
     //whether this node's data has changed
     dirty_val: bool,
-    //whether some this or decendents have changed
+    //whether this node or decendents have changed
     needs_update: bool,
     //the old size of the tree
     old_size: usize,
