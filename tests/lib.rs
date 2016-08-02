@@ -56,11 +56,11 @@ impl<T: PartialEq + Clone> IncTree<T> for Tree<T> {
 
     //sets dirty flags on self and parents
     fn flag_as_updated(&self){
-            let mut node = self.borrow_mut();
-            node.needs_update = true;
-            if let Some((ref parent, _)) = node.parent {
-                parent.flag_as_updated();
-            }
+        let mut node = self.borrow_mut();
+        node.needs_update = true;
+        if let Some((ref parent, _)) = node.parent {
+            parent.flag_as_updated();
+        }
     }
 
     fn get_data(&self) -> T {
