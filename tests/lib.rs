@@ -1,6 +1,6 @@
 extern crate presort;
 
-use presort::PermutedVec;
+use presort::PresortedVec;
 use std::rc::Rc;
 use std::cell::RefCell; 
 
@@ -107,7 +107,7 @@ impl<T: PartialEq + Clone> IncTree<T> for Tree<T> {
     }
 }
 
-fn dump<T: Clone>(tree: &Tree<T>, vec: &mut PermutedVec<T>) -> usize {
+fn dump<T: Ord+Clone>(tree: &Tree<T>, vec: &mut PresortedVec<T>) -> usize {
     let mut tree = tree.borrow_mut();
     let mut size = 1;
     vec.push(tree.data.clone());
@@ -118,7 +118,7 @@ fn dump<T: Clone>(tree: &Tree<T>, vec: &mut PermutedVec<T>) -> usize {
     size
 }
 
-fn update<T: Clone>(tree: &Tree<T>, start_index: usize, vec: &mut PermutedVec<T>) -> usize {
+fn update<T: Ord+Clone>(tree: &Tree<T>, start_index: usize, vec: &mut PresortedVec<T>) -> usize {
     let mut tree = tree.borrow_mut();    
     let mut size = tree.old_size;    
     if tree.dirty_descendant || vec.len() < start_index + size {
@@ -142,7 +142,7 @@ fn update<T: Clone>(tree: &Tree<T>, start_index: usize, vec: &mut PermutedVec<T>
 #[test]
 fn test_tree() {
     let main_tree = Tree::new_node(37);
-    let mut vec = PermutedVec::new();
+    let mut vec = PresortedVec::new();
     dump(&main_tree, &mut vec);
     assert_eq!(vec.sorted_iter().collect::<Vec<&usize>>(), vec![&37]);
 }
@@ -154,7 +154,7 @@ fn test_update() {
     main_tree.push_child(Tree::new_node(42));
     main_tree.push_child(Tree::new_node(20));
     main_tree.push_child(Tree::new_node(63));
-    let mut vec = PermutedVec::new();
+    let mut vec = PresortedVec::new();
     dump(&main_tree, &mut vec);
     println!("finished first dump");
     assert_eq!(vec.sorted_iter().collect::<Vec<&usize>>(), vec![&20,&37,&42,&63]);
