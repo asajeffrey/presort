@@ -1,0 +1,1 @@
+initSidebarItems({"struct":[["PresortedIter","The type of presorted iterators over a presorted vector."],["PresortedVec","The type of presorted vectors."]]});

@@ -1,0 +1,1 @@
+initSidebarItems({"struct":[["PermutedIter","The type of permuted iterators over a permuted vector."],["PermutedVec","The type of permuted vectors."]]});

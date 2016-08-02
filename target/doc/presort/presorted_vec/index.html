@@ -4,13 +4,13 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="generator" content="rustdoc">
-    <meta name="description" content="API documentation for the Rust `presort` crate.">
-    <meta name="keywords" content="rust, rustlang, rust-lang, presort">
+    <meta name="description" content="API documentation for the Rust `presorted_vec` mod in crate `presort`.">
+    <meta name="keywords" content="rust, rustlang, rust-lang, presorted_vec">
 
-    <title>presort - Rust</title>
+    <title>presort::presorted_vec - Rust</title>
 
-    <link rel="stylesheet" type="text/css" href="../rustdoc.css">
-    <link rel="stylesheet" type="text/css" href="../main.css">
+    <link rel="stylesheet" type="text/css" href="../../rustdoc.css">
+    <link rel="stylesheet" type="text/css" href="../../main.css">
     
 
     
@@ -28,7 +28,7 @@
 
     <nav class="sidebar">
         
-        <p class='location'></p><script>window.sidebarCurrent = {name: 'presort', ty: 'mod', relpath: '../'};</script>
+        <p class='location'><a href='../index.html'>presort</a></p><script>window.sidebarCurrent = {name: 'presorted_vec', ty: 'mod', relpath: '../'};</script><script defer src="../sidebar-items.js"></script>
     </nav>
 
     <nav class="sub">
@@ -43,33 +43,25 @@
     </nav>
 
     <section id='main' class="content mod">
-<h1 class='fqn'><span class='in-band'>Crate <a class='mod' href=''>presort</a></span><span class='out-of-band'><span id='render-detail'>
+<h1 class='fqn'><span class='in-band'>Module <a href='../index.html'>presort</a>::<wbr><a class='mod' href=''>presorted_vec</a></span><span class='out-of-band'><span id='render-detail'>
                    <a id="toggle-all-docs" href="javascript:void(0)" title="collapse all docs">
                        [<span class='inner'>&#x2212;</span>]
                    </a>
-               </span><a id='src-0' class='srclink' href='../src/presort/src/lib.rs.html#1-19' title='goto source code'>[src]</a></span></h1>
-<div class='docblock'><p>A crate for permuted vectors.</p>
-
-<p>Permuted vectors consist of a vector, together with a permutation of its elements.
-In particular, <code>vec.sort()</code> sorts the permutation, not the vector.
-This allows the vector to be updated, and
-if the updates preserve sort order, then the next <code>vec.sort()</code>
-will be O(n) rather than O(n log n).</p>
-</div><h2 id='reexports' class='section-header'><a href="#reexports">Reexports</a></h2>
-<table><tr><td><code>pub use permuted_vec::<a class='struct' href='../presort/permuted_vec/struct.PermutedVec.html' title='presort::permuted_vec::PermutedVec'>PermutedVec</a>;</code></td></tr><tr><td><code>pub use presorted_vec::<a class='struct' href='../presort/presorted_vec/struct.PresortedVec.html' title='presort::presorted_vec::PresortedVec'>PresortedVec</a>;</code></td></tr></table><h2 id='modules' class='section-header'><a href="#modules">Modules</a></h2>
+               </span><a id='src-137' class='srclink' href='../../src/presort/src/presorted_vec.rs.html#1-274' title='goto source code'>[src]</a></span></h1>
+<h2 id='structs' class='section-header'><a href="#structs">Structs</a></h2>
 <table>
                        <tr class=' module-item'>
-                           <td><a class='mod' href='permuted_vec/index.html'
-                                  title='presort::permuted_vec'>permuted_vec</a></td>
+                           <td><a class='struct' href='struct.PresortedIter.html'
+                                  title='presort::presorted_vec::PresortedIter'>PresortedIter</a></td>
                            <td class='docblock short'>
-                                
+                                <p>The type of presorted iterators over a presorted vector.</p>
                            </td>
                        </tr>
                        <tr class=' module-item'>
-                           <td><a class='mod' href='presorted_vec/index.html'
-                                  title='presort::presorted_vec'>presorted_vec</a></td>
+                           <td><a class='struct' href='struct.PresortedVec.html'
+                                  title='presort::presorted_vec::PresortedVec'>PresortedVec</a></td>
                            <td class='docblock short'>
-                                
+                                <p>The type of presorted vectors.</p>
                            </td>
                        </tr></table></section>
     <section id='search' class="content hidden"></section>
@@ -125,13 +117,13 @@ will be O(n) rather than O(n log n).</p>
     
 
     <script>
-        window.rootPath = "../";
+        window.rootPath = "../../";
         window.currentCrate = "presort";
         window.playgroundUrl = "";
     </script>
-    <script src="../jquery.js"></script>
-    <script src="../main.js"></script>
+    <script src="../../jquery.js"></script>
+    <script src="../../main.js"></script>
     
-    <script defer src="../search-index.js"></script>
+    <script defer src="../../search-index.js"></script>
 </body>
 </html>
