@@ -1,7 +1,7 @@
 extern crate presort;
 
 use presort::PresortedVec;
-use presort::inc_tree::*;
+use presort::inc_tree::{Tree, IncTree, dump, update};
 
 #[test]
 fn test_tree() {
