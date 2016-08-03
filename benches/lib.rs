@@ -7,8 +7,8 @@ extern crate presort;
 use test::Bencher;
 use rand::Rng;
 
-use presort::*;
-use presort::inc_tree::*;
+use presort::PresortedVec;
+use presort::inc_tree::{Tree, IncTree, dump, update};
 
 const NODES: usize = 10000;
 const BINARY_DEPTH: usize = 13;
@@ -50,6 +50,7 @@ fn mutate_vals(tree: &Tree<usize>, high_depth: usize, edits: usize) {
             branch = branch.get_child(rng.gen::<usize>() % num);
         }
         branch.set_data(rng.gen());
+        //branch.set_data(branch.get_data()+1);
     }
 }
 
@@ -71,7 +72,7 @@ fn add_branches(tree: &Tree<usize>, high_depth: usize, adds: usize) {
 #[bench]
 fn build(b: &mut Bencher) {
     b.iter(|| {
-        let mut vec = PermutedVec::new();
+        let mut vec = PresortedVec::new();
         let tree = build_tree(DEPTH, NODES);
         dump(&tree, &mut vec)
     })
@@ -80,7 +81,7 @@ fn build(b: &mut Bencher) {
 #[bench]
 fn edit_50_batch(b: &mut Bencher) {
     b.iter(|| {
-        let mut vec = PermutedVec::new();
+        let mut vec = PresortedVec::new();
         let tree = build_tree(DEPTH, NODES);
         dump(&tree, &mut vec);
         mutate_vals(&tree, DEPTH, 50);
@@ -91,7 +92,7 @@ fn edit_50_batch(b: &mut Bencher) {
 #[bench]
 fn edit_50_seperate(b: &mut Bencher) {
     b.iter(|| {
-        let mut vec = PermutedVec::new();
+        let mut vec = PresortedVec::new();
         let tree = build_tree(DEPTH, NODES);
         dump(&tree, &mut vec);
         for _ in 0..50 {
@@ -104,7 +105,7 @@ fn edit_50_seperate(b: &mut Bencher) {
 #[bench]
 fn add_50_batch(b: &mut Bencher) {
     b.iter(|| {
-        let mut vec = PermutedVec::new();
+        let mut vec = PresortedVec::new();
         let tree = build_tree(DEPTH, NODES);
         dump(&tree, &mut vec);
         add_branches(&tree, DEPTH, 50);
@@ -115,7 +116,7 @@ fn add_50_batch(b: &mut Bencher) {
 #[bench]
 fn add_50_seperate(b: &mut Bencher) {
     b.iter(|| {
-        let mut vec = PermutedVec::new();
+        let mut vec = PresortedVec::new();
         let tree = build_tree(DEPTH, NODES);
         dump(&tree, &mut vec);
         for _ in 0..50 {
