@@ -14,6 +14,7 @@ extern crate heapsize;
 
 pub mod permuted_vec;
 pub mod presorted_vec;
+pub mod inc_tree;
 
 pub use permuted_vec::PermutedVec;
 pub use presorted_vec::PresortedVec;
