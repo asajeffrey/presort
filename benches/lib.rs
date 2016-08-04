@@ -59,6 +59,13 @@ fn mutate_vals(tree: &Tree<usize>, high_depth: usize, edits: usize) {
     }
 }
 
+fn incr_vals(tree: &Tree<usize>, high_depth: usize, edits: usize) {
+    for _ in 0..edits {
+        let subtree = random_subtree(tree, high_depth);
+        subtree.set_data(subtree.get_data() + 1);
+    }
+}
+
 fn add_branches(tree: &Tree<usize>, high_depth: usize, adds: usize) {
     let mut rng = rand::thread_rng();
     for _ in 0..adds {
@@ -85,6 +92,30 @@ fn edit_50_seperate(b: &mut Bencher) {
     b.iter(|| {
         for _ in 0..50 {
             mutate_vals(&tree, DEPTH, 1);
+            update(&tree, 0, &mut vec);       
+        }
+    })
+}
+
+#[bench]
+fn incr_50_batch(b: &mut Bencher) {
+    let mut vec = PresortedVec::new();
+    let tree = build_tree(DEPTH, NODES);
+    dump(&tree, &mut vec);
+    b.iter(|| {
+        incr_vals(&tree, DEPTH, 50);
+        update(&tree, 0, &mut vec);
+    })
+}
+
+#[bench]
+fn incr_50_seperate(b: &mut Bencher) {
+    let mut vec = PresortedVec::new();
+    let tree = build_tree(DEPTH, NODES);
+    dump(&tree, &mut vec);
+    b.iter(|| {
+        for _ in 0..50 {
+            incr_vals(&tree, DEPTH, 1);
             update(&tree, 0, &mut vec);       
         }
     })
