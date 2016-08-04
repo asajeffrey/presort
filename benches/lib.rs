@@ -70,20 +70,11 @@ fn add_branches(tree: &Tree<usize>, high_depth: usize, adds: usize) {
 }
 
 #[bench]
-fn build(b: &mut Bencher) {
-    b.iter(|| {
-        let mut vec = PresortedVec::new();
-        let tree = build_tree(DEPTH, NODES);
-        dump(&tree, &mut vec)
-    })
-}
-
-#[bench]
 fn edit_50_batch(b: &mut Bencher) {
+    let mut vec = PresortedVec::new();
+    let tree = build_tree(DEPTH, NODES);
+    dump(&tree, &mut vec);
     b.iter(|| {
-        let mut vec = PresortedVec::new();
-        let tree = build_tree(DEPTH, NODES);
-        dump(&tree, &mut vec);
         mutate_vals(&tree, DEPTH, 50);
         update(&tree, 0, &mut vec);
     })
@@ -91,10 +82,10 @@ fn edit_50_batch(b: &mut Bencher) {
 
 #[bench]
 fn edit_50_seperate(b: &mut Bencher) {
+    let mut vec = PresortedVec::new();
+    let tree = build_tree(DEPTH, NODES);
+    dump(&tree, &mut vec);
     b.iter(|| {
-        let mut vec = PresortedVec::new();
-        let tree = build_tree(DEPTH, NODES);
-        dump(&tree, &mut vec);
         for _ in 0..50 {
             mutate_vals(&tree, DEPTH, 1);
             update(&tree, 0, &mut vec);       
@@ -104,10 +95,10 @@ fn edit_50_seperate(b: &mut Bencher) {
 
 #[bench]
 fn add_50_batch(b: &mut Bencher) {
+    let mut vec = PresortedVec::new();
+    let tree = build_tree(DEPTH, NODES);
+    dump(&tree, &mut vec);
     b.iter(|| {
-        let mut vec = PresortedVec::new();
-        let tree = build_tree(DEPTH, NODES);
-        dump(&tree, &mut vec);
         add_branches(&tree, DEPTH, 50);
         update(&tree, 0, &mut vec);       
     })
@@ -115,10 +106,10 @@ fn add_50_batch(b: &mut Bencher) {
 
 #[bench]
 fn add_50_seperate(b: &mut Bencher) {
+    let mut vec = PresortedVec::new();
+    let tree = build_tree(DEPTH, NODES);
+    dump(&tree, &mut vec);
     b.iter(|| {
-        let mut vec = PresortedVec::new();
-        let tree = build_tree(DEPTH, NODES);
-        dump(&tree, &mut vec);
         for _ in 0..50 {
             add_branches(&tree, DEPTH, 50);
             update(&tree, 0, &mut vec);       
