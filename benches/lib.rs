@@ -35,37 +35,34 @@ fn build_tree(max_depth: usize, nodes: usize) -> Tree<usize> {
 
     tree
 }
+
+// Pick a random subtree from the tree
+fn random_subtree(tree: &Tree<usize>, high_depth: usize) -> Tree<usize> {
+    let mut rng = rand::thread_rng();
+    let mut subtree = tree.clone();
+    let depth = rng.gen::<usize>() % high_depth;
+    for _ in 0..depth {
+        let num = subtree.num_children();
+        if num <= 0 { return subtree; }
+        subtree = subtree.get_child(rng.gen::<usize>() % num);
+    }
+    return subtree;
+}
+
 // mutates `edits` number of values of `tree`,
 // at no more than a max depth of `high_depth`
 // shorter branches may have the ends updated more often
 fn mutate_vals(tree: &Tree<usize>, high_depth: usize, edits: usize) {
     let mut rng = rand::thread_rng();
-
     for _ in 0..edits {
-        let mut branch = tree.clone();
-        let depth = rng.gen::<usize>() % high_depth;
-        for _ in 0..depth {
-            let num = branch.num_children();
-            if num <= 0 {break};
-            branch = branch.get_child(rng.gen::<usize>() % num);
-        }
-        branch.set_data(rng.gen());
-        //branch.set_data(branch.get_data()+1);
+        random_subtree(tree, high_depth).set_data(rng.gen());
     }
 }
 
 fn add_branches(tree: &Tree<usize>, high_depth: usize, adds: usize) {
     let mut rng = rand::thread_rng();
-
     for _ in 0..adds {
-        let mut branch = tree.clone();
-        let depth = rng.gen::<usize>() % high_depth;
-        for _ in 0..depth {
-            let num = branch.num_children();
-            if num <= 0 {break};
-            branch = branch.get_child(rng.gen::<usize>() % num);
-        }
-        branch.push_child(Tree::new_node(rng.gen()));
+        random_subtree(tree, high_depth).push_child(Tree::new_node(rng.gen()));
     }
 }
 
