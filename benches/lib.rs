@@ -81,6 +81,7 @@ fn edit_50_batch(b: &mut Bencher) {
     b.iter(|| {
         mutate_vals(&tree, DEPTH, 50);
         update(&tree, 0, &mut vec);
+        vec.sort();
     })
 }
 
@@ -92,7 +93,8 @@ fn edit_50_seperate(b: &mut Bencher) {
     b.iter(|| {
         for _ in 0..50 {
             mutate_vals(&tree, DEPTH, 1);
-            update(&tree, 0, &mut vec);       
+            update(&tree, 0, &mut vec);
+            vec.sort();
         }
     })
 }
@@ -105,6 +107,7 @@ fn incr_50_batch(b: &mut Bencher) {
     b.iter(|| {
         incr_vals(&tree, DEPTH, 50);
         update(&tree, 0, &mut vec);
+        vec.sort();
     })
 }
 
@@ -117,6 +120,7 @@ fn incr_50_seperate(b: &mut Bencher) {
         for _ in 0..50 {
             incr_vals(&tree, DEPTH, 1);
             update(&tree, 0, &mut vec);       
+            vec.sort();
         }
     })
 }
@@ -129,6 +133,7 @@ fn add_50_batch(b: &mut Bencher) {
     b.iter(|| {
         add_branches(&tree, DEPTH, 50);
         update(&tree, 0, &mut vec);       
+        vec.sort();
     })
 }
 
@@ -141,6 +146,7 @@ fn add_50_seperate(b: &mut Bencher) {
         for _ in 0..50 {
             add_branches(&tree, DEPTH, 50);
             update(&tree, 0, &mut vec);       
+            vec.sort();
         }
     })
 }
