@@ -1,6 +1,6 @@
-use presorted_vec::PresortedVec;
 use std::rc::Rc;
 use std::cell::RefCell; 
+use sortvec::SortVec;
 
 pub struct TreeNode<T> {
     //whether this node's data has changed
@@ -109,7 +109,7 @@ impl<T: PartialEq + Clone> IncTree<T> for Tree<T> {
     }
 }
 
-pub fn dump<T: Ord+Clone>(tree: &Tree<T>, vec: &mut PresortedVec<T>) -> usize {
+pub fn dump<T: Ord+Clone, V: SortVec<T>>(tree: &Tree<T>, vec: &mut V) -> usize {
     let mut tree = tree.borrow_mut();
     let mut size = 1;
     vec.push(tree.data.clone());
@@ -120,7 +120,7 @@ pub fn dump<T: Ord+Clone>(tree: &Tree<T>, vec: &mut PresortedVec<T>) -> usize {
     size
 }
 
-pub fn update<T: Ord+Clone>(tree: &Tree<T>, start_index: usize, vec: &mut PresortedVec<T>) -> usize {
+pub fn update<T: Ord+Clone, V: SortVec<T>>(tree: &Tree<T>, start_index: usize, vec: &mut V) -> usize {
     let mut tree = tree.borrow_mut();    
     let mut size = tree.old_size;    
     if tree.needs_update || vec.len() < start_index + size {

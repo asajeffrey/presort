@@ -1,5 +1,6 @@
 use std::cmp::Ordering;
 use std::slice::Iter;
+use sortvec::{SortVec,IntoSortedIterator};
 
 /// The type of permuted vectors.
 #[derive(Clone,Debug,Eq,PartialEq)]
@@ -27,6 +28,56 @@ impl<'a, T> Iterator for PermutedIter<'a, T> where T: 'a {
         let sorted_index = self.index;
         self.index = self.index + 1;
         self.permutation.get(sorted_index).and_then(|&index| self.contents.get(index))
+    }
+}
+
+impl<T: Ord> SortVec<T> for PermutedVec<T> {
+    /// The length of the vector.
+    fn len(&self) -> usize {
+        self.contents.len()
+    }
+
+    /// Append an element to the end of the vector.
+    fn push(&mut self, value: T) {
+        //println!("vec push index {:?}", self.len());
+        let index = self.contents.len();
+        self.contents.push(value);
+        self.permutation.push(index);
+    }
+
+    
+    /// Set the `i`th element of the vector.
+    /// Panics if the vector contains fewer than `i` elements.
+    fn set(&mut self, index: usize, value: T) {
+        //println!("vec set index {:?}", index);
+        self.contents[index] = value;
+    }
+
+    
+    /// Truncate this vector and reset the sort if necessary.
+    fn truncate(&mut self, len: usize) {
+        //println!("vec truncate to {:?}", len);
+        if len < self.len() {
+            self.contents.truncate(len);
+            self.permutation.clear();
+            self.permutation.extend(0..len);
+        }
+    }
+    
+    /// Sort the permutation on the vector
+    fn sort(&mut self) {
+        self.sort_by(|a,b| { a.cmp(b) })
+    }
+}
+
+impl<'a, T: Ord> IntoSortedIterator for &'a mut PermutedVec<T> {
+    type Item = &'a T;
+    type IntoSortedIter = PermutedIter<'a, T>;
+
+    /// A sorted iterator over the vector.
+    fn sorted_iter(self) -> PermutedIter<'a, T> {
+        self.sort_by(|a,b|{a.cmp(b)});
+        self.permuted_iter()
     }
 }
 
@@ -91,36 +142,6 @@ impl<T> PermutedVec<T> {
     /// Returns `None` if the vector contains fewer than `i` elements.
     pub fn get_permuted(&self, permuted: usize) -> Option<&T> {
         self.permutation.get(permuted).and_then(|&index| self.contents.get(index))
-    }
-
-    /// Set the `i`th element of the vector.
-    /// Panics if the vector contains fewer than `i` elements.
-    pub fn set(&mut self, index: usize, value: T) {
-        //println!("vec set index {:?}", index);
-        self.contents[index] = value;
-    }
-
-    /// Append an element to the end of the vector.
-    pub fn push(&mut self, value: T) {
-        //println!("vec push index {:?}", self.len());
-        let index = self.contents.len();
-        self.contents.push(value);
-        self.permutation.push(index);
-    }
-
-    /// Truncate this vector and reset the sort if necessary.
-    pub fn truncate(&mut self, len: usize) {
-        //println!("vec truncate to {:?}", len);
-        if len < self.len() {
-            self.contents.truncate(len);
-            self.permutation.clear();
-            self.permutation.extend(0..len);
-        }
-    }
-
-    /// The length of the vector.
-    pub fn len(&self) -> usize {
-        self.contents.len()
     }
 }
 

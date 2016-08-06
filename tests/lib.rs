@@ -1,6 +1,6 @@
 extern crate presort;
 
-use presort::PresortedVec;
+use presort::{PresortedVec, IntoSortedIterator};
 use presort::inc_tree::{Tree, IncTree, dump, update};
 
 #[test]
