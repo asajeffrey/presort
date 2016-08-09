@@ -8,7 +8,7 @@ fn test_tree() {
     let main_tree = Tree::new_node(37);
     let mut vec = PresortedVec::new();
     dump(&main_tree, &mut vec);
-    assert_eq!(vec.sorted_iter().collect::<Vec<&usize>>(), vec![&37]);
+    assert_eq!(vec.into_sorted_iter().collect::<Vec<&usize>>(), vec![&37]);
 }
 
 #[test]
@@ -21,13 +21,13 @@ fn test_update() {
     let mut vec = PresortedVec::new();
     dump(&main_tree, &mut vec);
     println!("finished first dump");
-    assert_eq!(vec.sorted_iter().collect::<Vec<&usize>>(), vec![&20,&37,&42,&63]);
+    assert_eq!(vec.into_sorted_iter().collect::<Vec<&usize>>(), vec![&20,&37,&42,&63]);
 
     println!("start first update");
     main_tree.get_child(1).set_data(25);
     update(&main_tree, 0, &mut vec);
     println!("finished first update");
-    assert_eq!(vec.sorted_iter().collect::<Vec<&usize>>(), vec![&25,&37,&42,&63]);
+    assert_eq!(vec.into_sorted_iter().collect::<Vec<&usize>>(), vec![&25,&37,&42,&63]);
 
     println!("start add branch");
     let branch = main_tree.get_child(2);
@@ -38,7 +38,7 @@ fn test_update() {
     update(&main_tree, 0, &mut vec);
     println!("finished add branch");
     assert_eq!(
-        vec.sorted_iter().collect::<Vec<&usize>>(),
+        vec.into_sorted_iter().collect::<Vec<&usize>>(),
         vec![&25,&37,&42,&47,&53,&57,&61,&63]
     );
 
@@ -47,7 +47,7 @@ fn test_update() {
     update(&main_tree, 0, &mut vec);
     println!("finished update branch");
     assert_eq!(
-        vec.sorted_iter().collect::<Vec<&usize>>(),
+        vec.into_sorted_iter().collect::<Vec<&usize>>(),
         vec![&25,&37,&42,&47,&53,&57,&63,&77]
     );
 
@@ -57,7 +57,7 @@ fn test_update() {
     update(&main_tree, 0, &mut vec);
     println!("finished early insertion");
     assert_eq!(
-        vec.sorted_iter().collect::<Vec<&usize>>(),
+        vec.into_sorted_iter().collect::<Vec<&usize>>(),
         vec![&1,&25,&37,&42,&47,&53,&57,&63,&77]
     );
 
@@ -69,7 +69,7 @@ fn test_update() {
     update(&main_tree, 0, &mut vec);
     println!("finished deep add");
     assert_eq!(
-        vec.sorted_iter().collect::<Vec<&usize>>(),
+        vec.into_sorted_iter().collect::<Vec<&usize>>(),
         vec![&1,&25,&37,&42,&47,&53,&57,&63,&77,&100,&101]
     );
 
@@ -79,7 +79,7 @@ fn test_update() {
     update(&main_tree, 0, &mut vec);
     println!("finished deep edit");
     assert_eq!(
-        vec.sorted_iter().collect::<Vec<&usize>>(),
+        vec.into_sorted_iter().collect::<Vec<&usize>>(),
         vec![&1,&25,&37,&42,&47,&53,&57,&63,&77,&100,&105]
     );
 
@@ -89,7 +89,7 @@ fn test_update() {
     update(&main_tree, 0, &mut vec);
     println!("finished pop branch");
     assert_eq!(
-        vec.sorted_iter().collect::<Vec<&usize>>(),
+        vec.into_sorted_iter().collect::<Vec<&usize>>(),
         vec![&1,&25,&37,&42,&47,&53,&57,&63,&77]
     );
 }

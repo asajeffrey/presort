@@ -74,10 +74,8 @@ impl<'a, T: Ord> IntoSortedIterator for &'a mut PermutedVec<T> {
     type Item = &'a T;
     type IntoSortedIter = PermutedIter<'a, T>;
 
-    /// A sorted iterator over the vector.
-    fn sorted_iter(self) -> PermutedIter<'a, T> {
-        self.sort_by(|a,b|{a.cmp(b)});
-        self.permuted_iter()
+    fn into_sorted_iter(self) -> Self::IntoSortedIter {
+        self.sorted_iter_by(|a,b|{a.cmp(b)})
     }
 }
 

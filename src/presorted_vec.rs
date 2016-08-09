@@ -82,11 +82,10 @@ impl<'a, T: Ord> IntoSortedIterator for &'a mut PresortedVec<T> {
     type Item = &'a T;
     type IntoSortedIter = PresortedIter<'a, T>;
 
-    /// A sorted iterator over the vector.
-    fn sorted_iter(self) -> PresortedIter<'a, T> {
-        self.sort();
-        self.presorted_iter()
+    fn into_sorted_iter(self) -> Self::IntoSortedIter {
+        self.sorted_iter()
     }
+
 }
 
 impl<T> PresortedVec<T> where T:Ord {
@@ -109,6 +108,12 @@ impl<T> PresortedVec<T> where T:Ord {
     /// Is the presorted vector already sorted?
     pub fn is_sorted(&self) -> bool {
         self.is_sorted || self.contents.is_sorted_by(&mut |value_1, value_2| value_1.cmp(value_2))
+    }
+
+    /// A sorted iterator over the vector.
+    fn sorted_iter(&mut self) -> PresortedIter<T> {
+        self.sort();
+        self.presorted_iter()
     }
 
     /// Get the `i`th element of the vector.

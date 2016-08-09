@@ -21,7 +21,7 @@ pub trait IntoSortedIterator {
     type IntoSortedIter: Iterator<Item=Self::Item>;
 
     /// A sorted iterator over the vector.
-    fn sorted_iter(self) -> Self::IntoSortedIter;
+    fn into_sorted_iter(self) -> Self::IntoSortedIter;
 }
 
 impl<T: Ord> SortVec<T> for Vec<T> {
@@ -42,11 +42,15 @@ impl<T: Ord> SortVec<T> for Vec<T> {
     }
 }
 
-// impl<'a, T: Ord> IntoSortedIterator for &'a Vec<T> {
-//     type Item = T;
-//     type IntoSortedIter = Iter<T>;
+impl<'a, T: Ord + Clone> IntoSortedIterator for &'a Vec<T> {
+    type Item = &'a T;
+    type IntoSortedIter = ::std::vec::IntoIter<&'a T>;
 
-//     fn sorted_iter(self) {
+    fn into_sorted_iter(self) -> ::std::vec::IntoIter<&'a T>{
+        let mut sorted: Vec<&T> =
+            self.iter().collect();
+        sorted.sort_by(|a,b|{(*a).cmp(*b)});
+        sorted.into_iter()
+    }
+}
 
-//     }
-// }
