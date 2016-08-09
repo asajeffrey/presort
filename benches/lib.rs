@@ -10,7 +10,7 @@ use rand::Rng;
 use presort::{PresortedVec, PermutedVec, SortVec};
 use presort::inc_tree::{Tree, IncTree, dump, update};
 
-const NODES: usize = 1000;
+const NODES: usize = 10000;
 const BINARY_DEPTH: usize = 13;
 const DEEP_DEPTH: usize = 150;
 const WIDE_DEPTH: usize = 6;

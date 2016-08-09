@@ -111,7 +111,7 @@ impl<T> PresortedVec<T> where T:Ord {
     }
 
     /// A sorted iterator over the vector.
-    fn sorted_iter(&mut self) -> PresortedIter<T> {
+    pub fn sorted_iter(&mut self) -> PresortedIter<T> {
         self.sort();
         self.presorted_iter()
     }
