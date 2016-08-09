@@ -1,4 +1,5 @@
 use permuted_vec::{PermutedIter, PermutedVec};
+use sortvec::{SortVec, IntoSortedIterator};
 
 /// The type of presorted vectors.
 #[derive(Clone,Debug,Eq,PartialEq)]
@@ -25,6 +26,68 @@ impl<'a, T> Iterator for PresortedIter<'a, T> where T: 'a+Ord {
     }
 }
 
+impl<T: Ord> SortVec<T> for PresortedVec<T> {
+    /// The length of the vector.
+    fn len(&self) -> usize {
+        self.contents.len()
+    }
+
+    /// Append an element to the end of the vector.    
+    fn push(&mut self, value: T) {
+        //println!("vec push index {:?}", self.len());
+        let permuted = self.contents.len();
+        self.is_sorted =
+            self.is_sorted &&
+            self.contents.get_permuted(permuted.wrapping_sub(1)).map(|before| before <= &value).unwrap_or(true);
+        self.contents.push(value);
+        self.inverse.push(permuted);
+    }
+
+    /// Set the `i`th element of the vector.
+    /// Panics if the vector contains fewer than `i` elements.
+    fn set(&mut self, index: usize, value: T) {
+        let permuted = self.inverse[index];
+        self.is_sorted =
+            self.is_sorted &&
+            self.contents.get_permuted(permuted.wrapping_sub(1)).map(|before| before <= &value).unwrap_or(true) &&
+            self.contents.get_permuted(permuted.wrapping_add(1)).map(|after| &value <= after).unwrap_or(true);
+        self.contents.set(index, value);
+    }
+
+    /// Truncate this vector and reset the sort if necessary.
+    fn truncate(&mut self, len: usize) {
+        //println!("vec truncate to {:?}", len);
+        if len < self.len() {
+            self.contents.truncate(len);
+            self.inverse.clear();
+            self.inverse.extend(0..len);
+            self.is_sorted = false;
+        }
+    }
+
+    /// Sort the permutation on the vector
+    fn sort(&mut self) {
+        if !self.is_sorted {
+            self.contents.sort_by(|value_1, value_2| value_1.cmp(value_2));
+            for (i, &j) in self.contents.permutation_iter().enumerate() {
+                self.inverse[j] = i;
+            }
+            self.is_sorted = true;
+        }
+    }
+
+}
+
+impl<'a, T: Ord> IntoSortedIterator for &'a mut PresortedVec<T> {
+    type Item = &'a T;
+    type IntoSortedIter = PresortedIter<'a, T>;
+
+    fn into_sorted_iter(self) -> Self::IntoSortedIter {
+        self.sorted_iter()
+    }
+
+}
+
 impl<T> PresortedVec<T> where T:Ord {
     /// Create a new, empty presorted vector.
     pub fn new() -> PresortedVec<T> {
@@ -47,17 +110,6 @@ impl<T> PresortedVec<T> where T:Ord {
         self.is_sorted || self.contents.is_sorted_by(&mut |value_1, value_2| value_1.cmp(value_2))
     }
 
-    /// Sort the permutation on the vector
-    pub fn sort(&mut self) {
-        if !self.is_sorted {
-            self.contents.sort_by(|value_1, value_2| value_1.cmp(value_2));
-            for (i, &j) in self.contents.permutation_iter().enumerate() {
-                self.inverse[j] = i;
-            }
-            self.is_sorted = true;
-        }
-    }
-
     /// A sorted iterator over the vector.
     pub fn sorted_iter(&mut self) -> PresortedIter<T> {
         self.sort();
@@ -74,44 +126,6 @@ impl<T> PresortedVec<T> where T:Ord {
     /// Returns `None` if the vector contains fewer than `i` elements.
     pub fn get_permuted(&self, permuted: usize) -> Option<&T> {
         self.contents.get_permuted(permuted)
-    }
-
-    /// Set the `i`th element of the vector.
-    /// Panics if the vector contains fewer than `i` elements.
-    pub fn set(&mut self, index: usize, value: T) {
-        let permuted = self.inverse[index];
-        self.is_sorted =
-            self.is_sorted &&
-            self.contents.get_permuted(permuted.wrapping_sub(1)).map(|before| before <= &value).unwrap_or(true) &&
-            self.contents.get_permuted(permuted.wrapping_add(1)).map(|after| &value <= after).unwrap_or(true);
-        self.contents.set(index, value);
-    }
-
-    /// Append an element to the end of the vector.
-    pub fn push(&mut self, value: T) {
-        //println!("vec push index {:?}", self.len());
-        let permuted = self.contents.len();
-        self.is_sorted =
-            self.is_sorted &&
-            self.contents.get_permuted(permuted.wrapping_sub(1)).map(|before| before <= &value).unwrap_or(true);
-        self.contents.push(value);
-        self.inverse.push(permuted);
-    }
-
-    /// Truncate this vector and reset the sort if necessary.
-    pub fn truncate(&mut self, len: usize) {
-        //println!("vec truncate to {:?}", len);
-        if len < self.len() {
-            self.contents.truncate(len);
-            self.inverse.clear();
-            self.inverse.extend(0..len);
-            self.is_sorted = false;
-        }
-    }
-
-    /// The length of the vector.
-    pub fn len(&self) -> usize {
-        self.contents.len()
     }
 }
 

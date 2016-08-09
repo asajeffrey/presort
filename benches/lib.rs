@@ -7,7 +7,7 @@ extern crate presort;
 use test::Bencher;
 use rand::Rng;
 
-use presort::PresortedVec;
+use presort::{PresortedVec, PermutedVec, SortVec};
 use presort::inc_tree::{Tree, IncTree, dump, update};
 
 const NODES: usize = 10000;
@@ -71,6 +71,15 @@ fn add_branches(tree: &Tree<usize>, high_depth: usize, adds: usize) {
     for _ in 0..adds {
         random_subtree(tree, high_depth).push_child(Tree::new_node(rng.gen()));
     }
+}
+
+#[bench]
+fn initial_dump(b: &mut Bencher) {
+    b.iter(|| {
+        let mut vec = PresortedVec::new();
+        let tree = build_tree(DEPTH,NODES);
+        dump(&tree, &mut vec);
+    })
 }
 
 #[bench]
