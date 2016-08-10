@@ -90,6 +90,6 @@ fn test_update() {
     println!("finished pop branch");
     assert_eq!(
         vec.into_sorted_iter().collect::<Vec<&usize>>(),
-        vec![&1,&25,&37,&42,&47,&53,&57,&63,&77]
+        vec![&0,&0,&1,&25,&37,&42,&47,&53,&57,&63,&77]
     );
 }

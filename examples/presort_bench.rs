@@ -42,7 +42,7 @@ fn main() {
         [removals] -r [removals]                    'branches to remove (currently unused)'
         [additions] -a [additions]                  'branches to add'
         [edits] -e [edits]                          'nodes to modify'
-        [incr] -i [incr]                            'nodes to increment (minor change)'
+        [change] -c [change]                        'chance to change sort order'
         [trials] -t [trials]                        'repetitions'
         [outfile] -o [outfile]                      'append output to this file'
         [header] -h                                 'write out a header to the results' ")
@@ -56,7 +56,7 @@ fn main() {
     let r = value_t!(args.value_of("removals"), usize).unwrap_or(0);
     let a = value_t!(args.value_of("additions"), usize).unwrap_or(0);
     let e = value_t!(args.value_of("edits"), usize).unwrap_or(0);
-    let i = value_t!(args.value_of("incr"), usize).unwrap_or(0);
+    let c = value_t!(args.value_of("change"), f32).unwrap_or(0.5);
     let t = value_t!(args.value_of("trials"), usize).unwrap_or(1);
     let mut o: Box<Write> = if let Some(f) = args.value_of("outfile") {
         Box::new(
@@ -80,7 +80,7 @@ fn main() {
             "removals",
             "additions",
             "edits",
-            "increments",
+            "change_chance",
             "time_dump",
             "time_init_sort",
             "time_modification",
@@ -133,10 +133,14 @@ fn main() {
 
         //modify tree
         let dur_modify = Duration::span(||{
+            let mut rng = rand::thread_rng();
             remove_branches(&tree, d, r);
             add_branches(&tree, d, a);
-            mutate_vals(&tree, d, e);
-            incr_vals(&tree, d, i);
+            if rng.gen::<f32>() < c {
+                mutate_vals(&tree, d, e);
+            } else {
+                incr_vals(&tree, d, e);
+            }
         });
 
         //update tree
@@ -164,7 +168,7 @@ fn main() {
         //write out results
         writeln!(o, "{}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}",
             time::precise_time_s() as usize,
-            tag,vec.ver(),d,n,r,a,e,i,
+            tag,vec.ver(),d,n,r,a,e,c,
             dur_dump.num_nanoseconds().unwrap(),
             dur_init_sort.num_nanoseconds().unwrap(),
             dur_modify.num_nanoseconds().unwrap(),
