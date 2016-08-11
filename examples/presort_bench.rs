@@ -10,7 +10,7 @@ use rand::Rng;
 use time::Duration;
 use clap::{App, Arg};
 use presort::{PresortedVec, PermutedVec, SortVec};
-use presort::inc_tree::{Tree, IncTree, dump, update};
+use presort::inc_tree::{Tree, IncTree, dump, update, update_no_pad};
 
 fn main() {
     //command-line
@@ -97,17 +97,17 @@ fn main() {
             } else if args.is_present("presort") {
                 VecVersion::Presort(PresortedVec::new())
             } else if args.is_present("presort_pad") {
-                unimplemented!()
+                VecVersion::PrePad(PresortedVec::new())
             } else if args.is_present("permuted") {
                 VecVersion::Permut(PermutedVec::new())
             } else if args.is_present("permuted_pad") {
-                unimplemented!()
+                VecVersion::PerPad(PermutedVec::new())
             } else {
                 VecVersion::Vec(Vec::new())
             };
 
         //initial tree creation
-        let mut tree = build_tree(d,n);
+        let tree = build_tree(d,n);
 
         //initial dump
         let dur_dump = Duration::span(||{
@@ -146,10 +146,10 @@ fn main() {
         //update tree
         let dur_update = Duration::span(||{
             match vec {
-                VecVersion::Vec(ref mut v) => update(&tree, 0, v),
-                VecVersion::Presort(ref mut v) => update(&tree, 0, v),
+                VecVersion::Vec(ref mut v) => update_no_pad(&tree, 0, v),
+                VecVersion::Presort(ref mut v) => update_no_pad(&tree, 0, v),
                 VecVersion::PrePad(ref mut v) => update(&tree, 0, v),
-                VecVersion::Permut(ref mut v) => update(&tree, 0, v),
+                VecVersion::Permut(ref mut v) => update_no_pad(&tree, 0, v),
                 VecVersion::PerPad(ref mut v) => update(&tree, 0, v),
             };
         });
