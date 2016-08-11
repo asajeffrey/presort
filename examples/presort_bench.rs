@@ -71,7 +71,7 @@ fn main() {
     
     //write out header
     if args.is_present("header"){
-        writeln!(o, "{}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}",
+        writeln!(o, "{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}",
             "timestamp",
             "user_tag",
             "vec_type",
@@ -166,7 +166,7 @@ fn main() {
         });
 
         //write out results
-        writeln!(o, "{}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}",
+        writeln!(o, "{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}",
             time::precise_time_s() as usize,
             tag,vec.ver(),d,n,r,a,e,c,
             dur_dump.num_nanoseconds().unwrap(),
