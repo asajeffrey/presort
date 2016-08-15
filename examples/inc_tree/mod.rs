@@ -1,6 +1,10 @@
+extern crate presort;
+
+pub mod sortvec;
+
 use std::rc::Rc;
 use std::cell::RefCell; 
-use sortvec::SortVec;
+use inc_tree::sortvec::SortVec;
 
 pub struct TreeNode<T> {
     //whether this node's data has changed

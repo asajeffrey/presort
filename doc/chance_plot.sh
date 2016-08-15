@@ -15,7 +15,7 @@ plot \\" > gnuplotscript
 
 for ver in vec presort presort_pad; do
 	# add plot line for version
-	echo "'${INDATA}.$ver' using 9:(\$13+\$14) title '$ver update+sort time', \\" >> gnuplotscript
+	echo "'${INDATA}.$ver' using 10:(\$14+\$15) title '$ver update+sort time', \\" >> gnuplotscript
 done
 
 # make plot

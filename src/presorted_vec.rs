@@ -1,5 +1,4 @@
 use permuted_vec::{PermutedIter, PermutedVec};
-use sortvec::{SortVec, IntoSortedIterator};
 
 /// The type of presorted vectors.
 #[derive(Clone,Debug,Eq,PartialEq)]
@@ -26,14 +25,14 @@ impl<'a, T> Iterator for PresortedIter<'a, T> where T: 'a+Ord {
     }
 }
 
-impl<T: Ord> SortVec<T> for PresortedVec<T> {
+impl<T> PresortedVec<T> where T:Ord {
     /// The length of the vector.
-    fn len(&self) -> usize {
+    pub fn len(&self) -> usize {
         self.contents.len()
     }
 
     /// Append an element to the end of the vector.    
-    fn push(&mut self, value: T) {
+    pub fn push(&mut self, value: T) {
         //println!("vec push index {:?}", self.len());
         let permuted = self.contents.len();
         self.is_sorted =
@@ -45,7 +44,7 @@ impl<T: Ord> SortVec<T> for PresortedVec<T> {
 
     /// Set the `i`th element of the vector.
     /// Panics if the vector contains fewer than `i` elements.
-    fn set(&mut self, index: usize, value: T) {
+    pub fn set(&mut self, index: usize, value: T) {
         let permuted = self.inverse[index];
         self.is_sorted =
             self.is_sorted &&
@@ -55,7 +54,7 @@ impl<T: Ord> SortVec<T> for PresortedVec<T> {
     }
 
     /// Truncate this vector and reset the sort if necessary.
-    fn truncate(&mut self, len: usize) {
+    pub fn truncate(&mut self, len: usize) {
         //println!("vec truncate to {:?}", len);
         if len < self.len() {
             self.contents.truncate(len);
@@ -66,7 +65,7 @@ impl<T: Ord> SortVec<T> for PresortedVec<T> {
     }
 
     /// Sort the permutation on the vector
-    fn sort(&mut self) {
+    pub fn sort(&mut self) {
         if !self.is_sorted {
             self.contents.sort_by(|value_1, value_2| value_1.cmp(value_2));
             for (i, &j) in self.contents.permutation_iter().enumerate() {
@@ -76,19 +75,6 @@ impl<T: Ord> SortVec<T> for PresortedVec<T> {
         }
     }
 
-}
-
-impl<'a, T: Ord> IntoSortedIterator for &'a mut PresortedVec<T> {
-    type Item = &'a T;
-    type IntoSortedIter = PresortedIter<'a, T>;
-
-    fn into_sorted_iter(self) -> Self::IntoSortedIter {
-        self.sorted_iter()
-    }
-
-}
-
-impl<T> PresortedVec<T> where T:Ord {
     /// Create a new, empty presorted vector.
     pub fn new() -> PresortedVec<T> {
         PresortedVec {

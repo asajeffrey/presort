@@ -4,13 +4,16 @@ extern crate time;
 extern crate clap;
 extern crate presort;
 
+mod inc_tree;
+
 use std::fs::OpenOptions;
 use std::io::Write;
 use rand::Rng;
 use time::Duration;
 use clap::{App, Arg};
-use presort::{PresortedVec, PermutedVec, SortVec};
-use presort::inc_tree::{Tree, IncTree, dump, update, update_no_pad};
+use presort::{PresortedVec, PermutedVec};
+use inc_tree::{Tree, IncTree, dump, update, update_no_pad};
+use inc_tree::sortvec::SortVec;
 
 fn main() {
     //command-line
@@ -37,13 +40,14 @@ fn main() {
         .conflicts_with_all(&["vec","presort","persort_pad","permut"])
     ).args_from_usage("\
         --tag [tag]                                 'max depth of initial tree'
+        [data_size] -b [data_size]                  'data size in bytes (unused)'
         [initial_max_depth] -d [initial_max_depth]  'max depth of initial tree'
         [initial_nodes] -n [initial_nodes]          'nodes of initial tree'
-        [removals] -r [removals]                    'branches to remove (currently unused)'
-        [additions] -a [additions]                  'branches to add'
         [edits] -e [edits]                          'nodes to modify'
+        [shape] -s [shape]                          'chance for a shape edit'
+        [add] -a [add]                              'chance to add a branch (rather than remove)'
         [change] -c [change]                        'chance to change sort order'
-        [trials] -t [trials]                        'repetitions'
+        [trials] -t [trials]                        'repetitions to average'
         [outfile] -o [outfile]                      'append output to this file'
         [header] -h                                 'write out a header to the results' ")
     .get_matches();
@@ -51,11 +55,12 @@ fn main() {
         None => "none",
         Some(t) => t
     };
+    let b = value_t!(args.value_of("data_size"), usize).unwrap_or(4);
     let d = value_t!(args.value_of("initial_max_depth"), usize).unwrap_or(13);
     let n = value_t!(args.value_of("initial_nodes"), usize).unwrap_or(10000);
-    let r = value_t!(args.value_of("removals"), usize).unwrap_or(0);
-    let a = value_t!(args.value_of("additions"), usize).unwrap_or(0);
     let e = value_t!(args.value_of("edits"), usize).unwrap_or(0);
+    let s = value_t!(args.value_of("shape"), f32).unwrap_or(0.0);
+    let a = value_t!(args.value_of("add"), f32).unwrap_or(0.5);
     let c = value_t!(args.value_of("change"), f32).unwrap_or(0.5);
     let t = value_t!(args.value_of("trials"), usize).unwrap_or(1);
     let mut o: Box<Write> = if let Some(f) = args.value_of("outfile") {
@@ -71,16 +76,17 @@ fn main() {
     
     //write out header
     if args.is_present("header"){
-        writeln!(o, "{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}",
+        writeln!(o, "{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}",
             "timestamp",
             "user_tag",
             "vec_type",
+            "data_size",
             "depth",
             "nodes",
-            "removals",
-            "additions",
             "edits",
-            "change_chance",
+            "chance_shape",
+            "chance_add",
+            "chance_reorder",
             "time_dump",
             "time_init_sort",
             "time_modification",
@@ -88,6 +94,14 @@ fn main() {
             "time_sort"
         ).unwrap();
     }
+    if t == 0 {return}
+
+    // average multiple trials
+    let mut dur_dump = Duration::seconds(0);
+    let mut dur_init_sort = Duration::seconds(0);
+    let mut dur_modify = Duration::seconds(0);
+    let mut dur_update = Duration::seconds(0);
+    let mut dur_sort = Duration::seconds(0);
 
     for _ in 0..t {
         //create target vector
@@ -110,7 +124,7 @@ fn main() {
         let tree = build_tree(d,n);
 
         //initial dump
-        let dur_dump = Duration::span(||{
+        dur_dump = dur_dump + Duration::span(||{
             match vec {
                 VecVersion::Vec(ref mut v) => dump(&tree, v),
                 VecVersion::Presort(ref mut v) => dump(&tree, v),
@@ -121,7 +135,7 @@ fn main() {
         });
 
         //initial sort
-        let dur_init_sort = Duration::span(||{
+        dur_init_sort = dur_init_sort + Duration::span(||{
             match vec {
                 VecVersion::Vec(ref mut v) => v.sort(),
                 VecVersion::Presort(ref mut v) => v.sort(),
@@ -132,19 +146,25 @@ fn main() {
         });
 
         //modify tree
-        let dur_modify = Duration::span(||{
+        dur_modify = dur_modify + Duration::span(||{
             let mut rng = rand::thread_rng();
-            remove_branches(&tree, d, r);
-            add_branches(&tree, d, a);
-            if rng.gen::<f32>() < c {
-                mutate_vals(&tree, d, e);
+            if rng.gen::<f32>() < s {
+                if rng.gen::<f32>() < a {
+                    add_branches(&tree, d, e);
+                } else {
+                    remove_branches(&tree, d, e);
+                }
             } else {
-                incr_vals(&tree, d, e);
+                if rng.gen::<f32>() < c {
+                    mutate_vals(&tree, d, e);
+                } else {
+                    incr_vals(&tree, d, e);
+                }
             }
         });
 
         //update tree
-        let dur_update = Duration::span(||{
+        dur_update = dur_update + Duration::span(||{
             match vec {
                 VecVersion::Vec(ref mut v) => update_no_pad(&tree, 0, v),
                 VecVersion::Presort(ref mut v) => update_no_pad(&tree, 0, v),
@@ -155,7 +175,7 @@ fn main() {
         });
 
         //sort tree
-        let dur_sort = Duration::span(||{
+        dur_sort = dur_sort + Duration::span(||{
             match vec {
                 VecVersion::Vec(ref mut v) => v.sort(),
                 VecVersion::Presort(ref mut v) => v.sort(),
@@ -164,18 +184,27 @@ fn main() {
                 VecVersion::PerPad(ref mut v) => v.sort(),
             };
         });
-
-        //write out results
-        writeln!(o, "{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}",
-            time::precise_time_s() as usize,
-            tag,vec.ver(),d,n,r,a,e,c,
-            dur_dump.num_nanoseconds().unwrap(),
-            dur_init_sort.num_nanoseconds().unwrap(),
-            dur_modify.num_nanoseconds().unwrap(),
-            dur_update.num_nanoseconds().unwrap(),
-            dur_sort.num_nanoseconds().unwrap()
-        ).unwrap();
     }
+
+    //write out results
+    let t = t as i64;
+    let vec =
+        if args.is_present("vec") {"vec"}
+        else if args.is_present("presort") {"presort"}
+        else if args.is_present("presort_pad") {"presort_pad"}
+        else if args.is_present("permuted") {"permuted"}
+        else if args.is_present("permuted_pad") {"permuted_pad"}
+        else {"vec"};
+
+    writeln!(o, "{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}",
+        time::precise_time_s() as usize,
+        tag,vec,b,d,n,e,s,a,c,
+        dur_dump.num_nanoseconds().unwrap()/t,
+        dur_init_sort.num_nanoseconds().unwrap()/t,
+        dur_modify.num_nanoseconds().unwrap()/t,
+        dur_update.num_nanoseconds().unwrap()/t,
+        dur_sort.num_nanoseconds().unwrap()/t
+    ).unwrap();
 }
 
 enum VecVersion<T: Ord> {
@@ -184,18 +213,6 @@ enum VecVersion<T: Ord> {
     PrePad(PresortedVec<T>),
     Permut(PermutedVec<T>),
     PerPad(PermutedVec<T>),
-}
-
-impl<T: Ord> VecVersion<T> {
-    fn ver(&self) -> &str {
-        match *self {
-            VecVersion::Vec(_) => "vec",
-            VecVersion::Presort(_) => "presorted",
-            VecVersion::PrePad(_) => "presorted_pad",
-            VecVersion::Permut(_) => "permuted",
-            VecVersion::PerPad(_) => "permuted_pad",
-        }
-    }
 }
 
 //creates a random tree with the requested parameters
