@@ -2,7 +2,7 @@ OUTDATA="target/data/chance.data"
 
 # invoke benchmark program
 BENCH="cargo run --release --example presort_bench --"
-ARGS="--tag chance -t 1 -d 13 -n 10000 -r 0 -a 0 -e 100"
+ARGS="--tag chance -t 5 -d 13 -n 10000 -e 100 -s 0 -a 0 "
 
 for ver in vec presort presort_pad; do
 	
