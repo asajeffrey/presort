@@ -3,6 +3,7 @@ extern crate time;
 #[macro_use]
 extern crate clap;
 extern crate presort;
+extern crate stats;
 
 mod inc_tree;
 
@@ -12,6 +13,7 @@ use rand::Rng;
 use time::Duration;
 use clap::{App, Arg};
 use presort::{PresortedVec, PermutedVec};
+use stats::{mean,stddev};
 use inc_tree::{Tree, IncTree, dump, update, update_no_pad};
 use inc_tree::sortvec::SortVec;
 
@@ -76,7 +78,7 @@ fn main() {
     
     //write out header
     if args.is_present("header"){
-        writeln!(o, "{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}",
+        writeln!(o, "{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}",
             "timestamp",
             "user_tag",
             "vec_type",
@@ -87,21 +89,21 @@ fn main() {
             "chance_shape",
             "chance_add",
             "chance_reorder",
-            "time_dump",
-            "time_init_sort",
-            "time_modification",
-            "time_update",
-            "time_sort"
+            "time_dump", "sd_dump",
+            "time_init_sort", "sd_init_sort",
+            "time_modification", "sd_modification",
+            "time_update", "sd_update",
+            "time_sort", "sd_sort"
         ).unwrap();
     }
     if t == 0 {return}
 
     // average multiple trials
-    let mut dur_dump = Duration::seconds(0);
-    let mut dur_init_sort = Duration::seconds(0);
-    let mut dur_modify = Duration::seconds(0);
-    let mut dur_update = Duration::seconds(0);
-    let mut dur_sort = Duration::seconds(0);
+    let mut dur_dump = Vec::new();
+    let mut dur_init_sort = Vec::new();
+    let mut dur_modify = Vec::new();
+    let mut dur_update = Vec::new();
+    let mut dur_sort = Vec::new();
 
     for _ in 0..t {
         //create target vector
@@ -124,7 +126,7 @@ fn main() {
         let tree = build_tree(d,n);
 
         //initial dump
-        dur_dump = dur_dump + Duration::span(||{
+        dur_dump.push(Duration::span(||{
             match vec {
                 VecVersion::Vec(ref mut v) => dump(&tree, v),
                 VecVersion::Presort(ref mut v) => dump(&tree, v),
@@ -132,10 +134,10 @@ fn main() {
                 VecVersion::Permut(ref mut v) => dump(&tree, v),
                 VecVersion::PerPad(ref mut v) => dump(&tree, v),
             };
-        });
+        }).num_nanoseconds().unwrap());
 
         //initial sort
-        dur_init_sort = dur_init_sort + Duration::span(||{
+        dur_init_sort.push(Duration::span(||{
             match vec {
                 VecVersion::Vec(ref mut v) => v.sort(),
                 VecVersion::Presort(ref mut v) => v.sort(),
@@ -143,10 +145,10 @@ fn main() {
                 VecVersion::Permut(ref mut v) => v.sort(),
                 VecVersion::PerPad(ref mut v) => v.sort(),
             };
-        });
+        }).num_nanoseconds().unwrap());
 
         //modify tree
-        dur_modify = dur_modify + Duration::span(||{
+        dur_modify.push(Duration::span(||{
             let mut rng = rand::thread_rng();
             if rng.gen::<f32>() < s {
                 if rng.gen::<f32>() < a {
@@ -161,10 +163,10 @@ fn main() {
                     incr_vals(&tree, d, e);
                 }
             }
-        });
+        }).num_nanoseconds().unwrap());
 
         //update tree
-        dur_update = dur_update + Duration::span(||{
+        dur_update.push(Duration::span(||{
             match vec {
                 VecVersion::Vec(ref mut v) => update_no_pad(&tree, 0, v),
                 VecVersion::Presort(ref mut v) => update_no_pad(&tree, 0, v),
@@ -172,10 +174,10 @@ fn main() {
                 VecVersion::Permut(ref mut v) => update_no_pad(&tree, 0, v),
                 VecVersion::PerPad(ref mut v) => update(&tree, 0, v),
             };
-        });
+        }).num_nanoseconds().unwrap());
 
         //sort tree
-        dur_sort = dur_sort + Duration::span(||{
+        dur_sort.push(Duration::span(||{
             match vec {
                 VecVersion::Vec(ref mut v) => v.sort(),
                 VecVersion::Presort(ref mut v) => v.sort(),
@@ -183,11 +185,10 @@ fn main() {
                 VecVersion::Permut(ref mut v) => v.sort(),
                 VecVersion::PerPad(ref mut v) => v.sort(),
             };
-        });
+        }).num_nanoseconds().unwrap());
     }
 
     //write out results
-    let t = t as i64;
     let vec =
         if args.is_present("vec") {"vec"}
         else if args.is_present("presort") {"presort"}
@@ -196,14 +197,14 @@ fn main() {
         else if args.is_present("permuted_pad") {"permuted_pad"}
         else {"vec"};
 
-    writeln!(o, "{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}",
+    writeln!(o, "{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}",
         time::precise_time_s() as usize,
         tag,vec,b,d,n,e,s,a,c,
-        dur_dump.num_nanoseconds().unwrap()/t,
-        dur_init_sort.num_nanoseconds().unwrap()/t,
-        dur_modify.num_nanoseconds().unwrap()/t,
-        dur_update.num_nanoseconds().unwrap()/t,
-        dur_sort.num_nanoseconds().unwrap()/t
+        mean(dur_dump.clone().into_iter()), stddev(dur_dump.into_iter()),
+        mean(dur_init_sort.clone().into_iter()), stddev(dur_init_sort.into_iter()),
+        mean(dur_modify.clone().into_iter()), stddev(dur_modify.into_iter()),
+        mean(dur_update.clone().into_iter()), stddev(dur_update.into_iter()),
+        mean(dur_sort.clone().into_iter()), stddev(dur_sort.into_iter()),
     ).unwrap();
 }
 
@@ -262,9 +263,11 @@ fn incr_vals(tree: &Tree<usize>, high_depth: usize, edits: usize) {
 }
 
 fn add_branches(tree: &Tree<usize>, high_depth: usize, adds: usize) {
-    let mut rng = rand::thread_rng();
     for _ in 0..adds {
-        random_subtree(tree, high_depth).push_child(Tree::new_node(rng.gen()));
+        let new_hight = high_depth / 2;
+        let new_nodes = (new_hight as f32 / 2.0).log(2.0) as usize;
+        let branch = build_tree(new_hight, new_nodes);
+        random_subtree(tree, high_depth).push_child(branch);
     }
 }
 

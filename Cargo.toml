@@ -13,3 +13,4 @@ heapsize = { version = "0.3", optional = true }
 rand = "0.3"
 time = "0.1"
 clap = "2"
+streaming-stats = "0.1"

@@ -11,11 +11,17 @@ set key autotitle columnhead
 set terminal svg
 # select output file
 set output '$OUTPLOT'
+# compute stddev sum
+ss(x,y) = sqrt((x**2 + y**2) / 2)
+# plot lines
 plot \\" > gnuplotscript
 
+i=0
 for ver in vec presort presort_pad; do
 	# add plot line for version
-	echo "'${INDATA}.$ver' using 10:(\$14+\$15) title '$ver update+sort time', \\" >> gnuplotscript
+	echo "'$INDATA' i $i using (\$10+${i}*0.01):(\$17+\$19):(ss(\$18,\$20)) \\" >> gnuplotscript
+	echo "title '$ver update+sort time' with errorbars, \\" >> gnuplotscript
+	((i++))
 done
 
 # make plot
