@@ -1,3 +1,4 @@
+// TODO: use Weak<> pointers to avoid memory leaks
 extern crate presort;
 
 pub mod sortvec;
