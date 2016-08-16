@@ -1,5 +1,5 @@
 INDATA="target/data/chance.data"
-OUTPLOT="target/data/chance.svg"
+OUTPLOT="target/data/chance.pdf"
 
 #clear old plot
 rm -f $OUTPLOT
@@ -7,8 +7,8 @@ rm -f $OUTPLOT
 # start plot script
 echo "# skip header
 set key autotitle columnhead
-# select svg file format
-set terminal svg
+# select pdf file format
+set terminal pdf
 # select output file
 set output '$OUTPLOT'
 # compute stddev sum
