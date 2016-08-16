@@ -1,10 +1,13 @@
+# name of experiment
+EXPR="shape_edit"
+
 # files created/overwritten
-DATA="target/data/shape_edit.data"
-PLOT="target/data/shape_edit.svg"
+DATA="../target/data/${EXPR}.data"
+PLOT="../target/data/${EXPR}.svg"
 
 # benchmark program and fixed parameters
 BENCH="cargo run --release --example presort_bench --"
-ARGS="--tag shape_edit -t 50 -e 100 -s 1 -a 0.5"
+ARGS="--tag ${EXPR} -t 50 -e 100 -s 1 -a 0.5"
 VERS="vec presort presort_pad permute permute_pad"
 
 # Collect Data

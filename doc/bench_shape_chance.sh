@@ -1,10 +1,13 @@
+# name of experiment
+EXPR="shape_chance"
+
 # files created/overwritten
-DATA="target/data/shape_chance.data"
-PLOT="target/data/shape_chance.svg"
+DATA="../target/data/${EXPR}.data"
+PLOT="../target/data/${EXPR}.svg"
 
 # benchmark program and fixed parameters
 BENCH="cargo run --release --example presort_bench --"
-ARGS="--tag shape_chance -t 50 -d 13 -n 10000 -e 100 -a 0.5 -c 0.5"
+ARGS="--tag ${EXPR} -t 50 -d 13 -n 10000 -e 100 -a 0.5 -c 0.5"
 VERS="vec presort presort_pad permute permute_pad"
 
 # Collect Data

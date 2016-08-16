@@ -1,10 +1,13 @@
+# name of experiment
+EXPR="removals"
+
 # files created/overwritten
-DATA="target/data/removals.data"
-PLOT="target/data/removals.svg"
+DATA="../target/data/${EXPR}.data"
+PLOT="../target/data/${EXPR}.svg"
 
 # benchmark program and fixed parameters
 BENCH="cargo run --release --example presort_bench --"
-ARGS="--tag removals -t 50 -e 100 -s 1 -a 0"
+ARGS="--tag ${EXPR} -t 50 -e 100 -s 1 -a 0"
 VERS="vec presort presort_pad permute permute_pad"
 
 # Collect Data

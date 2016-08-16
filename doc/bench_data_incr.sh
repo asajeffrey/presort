@@ -1,10 +1,13 @@
+# name of experiment
+EXPR="data_incr"
+
 # files created/overwritten
-DATA="target/data/data_incr.data"
-PLOT="target/data/data_incr.svg"
+DATA="../target/data/${EXPR}.data"
+PLOT="../target/data/${EXPR}.svg"
 
 # benchmark program and fixed parameters
 BENCH="cargo run --release --example presort_bench --"
-ARGS="--tag data_incr -t 50 -e 100 -s 0 -c 0"
+ARGS="--tag ${EXPR} -t 50 -e 100 -s 0 -c 0"
 VERS="vec presort presort_pad permute permute_pad"
 
 # Collect Data

@@ -1,10 +1,13 @@
+# name of experiment
+EXPR="additions"
+
 # files created/overwritten
-DATA="target/data/additions.data"
-PLOT="target/data/additions.svg"
+DATA="../target/data/${EXPR}.data"
+PLOT="../target/data/${EXPR}.svg"
 
 # benchmark program and fixed parameters
 BENCH="cargo run --release --example presort_bench --"
-ARGS="--tag additions -t 50 -e 100 -s 1 -a 1"
+ARGS="--tag ${EXPR} -t 50 -e 100 -s 1 -a 1"
 VERS="vec presort presort_pad permute permute_pad"
 
 # Collect Data
