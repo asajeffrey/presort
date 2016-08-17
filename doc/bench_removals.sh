@@ -3,7 +3,7 @@ EXPR="removals"
 
 # files created/overwritten
 DATA="../target/data/${EXPR}.data"
-PLOT="../target/data/${EXPR}.svg"
+PLOT="../target/data/${EXPR}.pdf"
 
 # benchmark program and fixed parameters
 BENCH="cargo run --release --example presort_bench --"
@@ -49,8 +49,8 @@ rm -f $PLOT
 # start plot script
 echo "# skip header
 set key autotitle columnhead
-# select svg file format
-set terminal svg
+# select pdf file format
+set terminal pdf
 # select output file
 set output '$PLOT'
 # compute stddev sum
