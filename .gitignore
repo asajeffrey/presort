@@ -1,3 +1,8 @@
 /target/
 Cargo.lock
 *~
+*.aux
+*.bbl
+*.blg
+*.log
+*.pdf
