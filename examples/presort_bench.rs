@@ -23,23 +23,23 @@ fn main() {
     .arg(Arg::with_name("vec")
         .long("vec")
         .help("Use the default vector implementation")
-        .conflicts_with_all(&["presort","presort_pad","permut","permut_pad"])
+        .conflicts_with_all(&["presort","presort_pad","permute","permute_pad"])
     ).arg(Arg::with_name("presort")
         .long("presort")
         .help("Use the presorted vector implementation")
-        .conflicts_with_all(&["vec","presort_pad","permut","permut_pad"])
+        .conflicts_with_all(&["vec","presort_pad","permute","permute_pad"])
     ).arg(Arg::with_name("presort_pad")
         .long("presort_pad")
         .help("Use the persorted vector implementation with padding")
-        .conflicts_with_all(&["vec","presort","permut","permut_pad"])
-    ).arg(Arg::with_name("permut")
-        .long("permut")
+        .conflicts_with_all(&["vec","presort","permute","permute_pad"])
+    ).arg(Arg::with_name("permute")
+        .long("permute")
         .help("Use the permuted vector implementation")
-        .conflicts_with_all(&["vec","presort","persort_pad","permut_pad"])
-    ).arg(Arg::with_name("permut_pad")
-        .long("permut_pad")
+        .conflicts_with_all(&["vec","presort","persort_pad","permute_pad"])
+    ).arg(Arg::with_name("permute_pad")
+        .long("permute_pad")
         .help("Use the permuted vector implementation with padding")
-        .conflicts_with_all(&["vec","presort","persort_pad","permut"])
+        .conflicts_with_all(&["vec","presort","persort_pad","permute"])
     ).args_from_usage("\
         --tag [tag]                                 'max depth of initial tree'
         [data_size] -b [data_size]                  'data size in bytes (unused)'
@@ -114,9 +114,9 @@ fn main() {
                 VecVersion::Presort(PresortedVec::new())
             } else if args.is_present("presort_pad") {
                 VecVersion::PrePad(PresortedVec::new())
-            } else if args.is_present("permuted") {
+            } else if args.is_present("permute") {
                 VecVersion::Permut(PermutedVec::new())
-            } else if args.is_present("permuted_pad") {
+            } else if args.is_present("permute_pad") {
                 VecVersion::PerPad(PermutedVec::new())
             } else {
                 VecVersion::Vec(Vec::new())
@@ -154,7 +154,7 @@ fn main() {
                 if rng.gen::<f32>() < a {
                     add_branches(&tree, d, e);
                 } else {
-                    remove_branches(&tree, d, e);
+                    remove_branches(&tree, d, e, 10);
                 }
             } else {
                 if rng.gen::<f32>() < c {
@@ -193,8 +193,8 @@ fn main() {
         if args.is_present("vec") {"vec"}
         else if args.is_present("presort") {"presort"}
         else if args.is_present("presort_pad") {"presort_pad"}
-        else if args.is_present("permuted") {"permuted"}
-        else if args.is_present("permuted_pad") {"permuted_pad"}
+        else if args.is_present("permute") {"permute"}
+        else if args.is_present("permute_pad") {"permute_pad"}
         else {"vec"};
 
     writeln!(o, "{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}",
@@ -219,6 +219,7 @@ enum VecVersion<T: Ord> {
 //creates a random tree with the requested parameters
 fn build_tree(max_depth: usize, nodes: usize) -> Tree<usize> {
     let mut rng = rand::thread_rng();
+    let max_depth = std::cmp::max(max_depth, 1);
 
     let tree = Tree::new_node(rng.gen());
 
@@ -271,11 +272,18 @@ fn add_branches(tree: &Tree<usize>, high_depth: usize, adds: usize) {
     }
 }
 
-fn remove_branches(tree: &Tree<usize>, high_depth: usize, removes: usize) {
+fn remove_branches(tree: &Tree<usize>, high_depth: usize, removes: usize, give_up: usize) {
     let mut i = 0;
+    let mut fails = 0;
     while i<removes {
-        if let Some(_) = random_subtree(tree, high_depth).pop_child() {
-            i = i + 1;
+        let t = random_subtree(tree, high_depth);
+        if let Some(_) = t.pop_child() {
+            i += 1; fails = 0;
+        } else {
+            fails += 1;
+            if fails >= give_up {
+                i += 1; fails = 0;
+            }
         }
     }
 }
