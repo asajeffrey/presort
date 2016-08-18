@@ -8,15 +8,15 @@ use std::cell::RefCell;
 use inc_tree::sortvec::SortVec;
 
 pub struct TreeNode<T> {
-    //whether this node's data has changed
+    // whether this node's data has changed
     dirty_val: bool,
-    //whether this node or decendents have changed
+    // whether this node or decendents have changed
     needs_update: bool,
-    //the old size of the tree
-    old_size: usize,
-    //parent and index in parent's child vec
+    // the index into the output vec
+    vec_index: usize,
+    // parent and index in parent's child vec
     parent: Option<(Tree<T>, usize)>,
-    //this node's data
+    // this node's data
     data: T,
     children: Vec<Tree<T>>,
 }
@@ -25,7 +25,6 @@ pub type Tree<T> = Rc<RefCell<TreeNode<T>>>;
 
 pub trait IncTree<T: PartialEq + Clone> {
     fn new_node(data: T) -> Tree<T>;
-    fn new_padded_node(data: T, pad: usize) -> Tree<T>;
     fn flag_as_new(&self);
     fn flag_as_updated(&self);
     fn get_data(&self) -> T;
@@ -34,9 +33,9 @@ pub trait IncTree<T: PartialEq + Clone> {
     fn set_child(&self, child_num: usize, child: Tree<T>);
     fn push_child(&self, child: Tree<T>);
     fn pop_child(&self) -> Option<Tree<T>>;
+    fn remove_child(&self, child: usize);
     fn num_children(&self) -> usize;
     fn total_nodes(&self) -> usize;
-    fn total_pad(&self) -> isize;
 }
 
 impl<T: PartialEq + Clone> IncTree<T> for Tree<T> {
@@ -44,18 +43,7 @@ impl<T: PartialEq + Clone> IncTree<T> for Tree<T> {
         Rc::new(RefCell::new(TreeNode {
             dirty_val: true,
             needs_update: true,
-            old_size: 0,
-            parent: None,
-            data: data,
-            children: vec![]
-        }))
-    }
-
-    fn new_padded_node(data: T, pad: usize) -> Tree<T>{
-        Rc::new(RefCell::new(TreeNode {
-            dirty_val: true,
-            needs_update: true,
-            old_size: pad,
+            vec_index: 0,
             parent: None,
             data: data,
             children: vec![]
@@ -116,11 +104,20 @@ impl<T: PartialEq + Clone> IncTree<T> for Tree<T> {
     fn pop_child(&self) -> Option<Tree<T>> {
         let child = self.borrow_mut().children.pop();
         if let Some(ref child) = child {
-            self.borrow_mut().dirty_val = true;
             self.flag_as_updated();
             child.borrow_mut().parent = None;
         }
         child
+    }
+
+    fn remove_child(&self, child: usize) {
+        {
+            let tree = self.borrow_mut();
+            let mut child = tree.children[child].borrow_mut();
+            child.parent = None;
+        }
+        self.flag_as_updated();
+        self.borrow_mut().children.remove(child);
     }
 
     fn num_children(&self) -> usize {
@@ -135,71 +132,99 @@ impl<T: PartialEq + Clone> IncTree<T> for Tree<T> {
         cnt
     }
 
-    fn total_pad(&self) -> isize {
-        self.borrow().old_size as isize - self.total_nodes() as isize
-    }
 }
 
-pub fn dump<T: Ord+Clone, V: SortVec<T>>(tree: &Tree<T>, vec: &mut V) -> usize {
+// writes the data in tree to vec, starting at free_index,
+// assuming the vec.len() is free_index,
+// returning the final length of the vec
+pub fn dump<T: Ord+Clone, V: SortVec<T>>(tree: &Tree<T>, free_index: usize, vec: &mut V) -> usize {
     let mut tree = tree.borrow_mut();
-    let mut size = 1;
+    tree.vec_index = free_index;
     vec.push(tree.data.clone());
     tree.dirty_val = false;
-    for kid in &tree.children { size += dump(&kid, vec); }
+    let mut next_free_index = free_index + 1;
+    for kid in &tree.children { next_free_index = dump(&kid, next_free_index, vec); }
     tree.needs_update = false;
-    if tree.old_size < size { tree.old_size = size };
-    if tree.old_size > size { size = tree.old_size };
-    size
+    next_free_index
 }
 
-pub fn update<T: Ord+Clone+Default, V: SortVec<T>>(tree: &Tree<T>, start_index: usize, vec: &mut V) -> usize {
-    // TODO: do we want to maintain padding after a truncation?
-    // or try to compress it to fit the larger vec into the old size allocation?
-    // Do we want to use up padding in later elements to make up for extra
-    // elements in earlier elements? (requires avoiding truncation)
+// Updates vec with data in tree,
+// assuming prior tree data is stored there,
+// and assuming vec.len() is at least free_index,
+// returning the next free index (= length of vec at data end).
+// Truncating vec to the return value is suggested at top level.
+// TODO: Pad final values if data shrinks
+pub fn update<T: Ord+Clone+Default, V: SortVec<T>>(tree: &Tree<T>, free_index: usize, vec: &mut V) -> usize {
     let mut tree = tree.borrow_mut();
-    let mut size = tree.old_size;
-    if tree.needs_update || vec.len() < start_index + size {
-        if vec.len() <= start_index {
-            vec.push(tree.data.clone());
+    // move if there's no space
+    if tree.vec_index < free_index {
+        tree.vec_index = free_index;
+        tree.needs_update = true;
+        tree.dirty_val = true;
+    } else if tree.vec_index > free_index {
+        // extend with padding if there's extra space
+        // TODO: consider limiting this padding
+        for i in free_index..tree.vec_index {vec.set(i, T::default())}
+    }
+    let mut next_free_index = tree.vec_index + 1;
+    if tree.needs_update {
+        // update value
+        if vec.len() == tree.vec_index {
+            vec.push(tree.data.clone())
         } else if tree.dirty_val {
-            vec.set(start_index, tree.data.clone());
+            vec.set(tree.vec_index, tree.data.clone())
         }
         tree.dirty_val = false;
-        size = 1;
-        for kid in &tree.children { size += update(&kid, start_index + size, vec); }
-        tree.needs_update = false;
-        if tree.old_size > size {
-            for i in size..tree.old_size {
-                vec.set(start_index + i, T::default())
-            }
-            size = tree.old_size
+        // update kids
+        for kid in &tree.children {
+            next_free_index = update(&kid, next_free_index, vec);
         }
-        if tree.old_size < size {
-            vec.truncate(start_index + size);
-            tree.old_size = size;
+        tree.needs_update = false;
+    } else {
+        // find last index
+        let num_children = tree.children.len();
+        if num_children > 0 {
+            next_free_index = tree.children[num_children - 1].borrow().vec_index + 1;
         }
     }
-    size
+    next_free_index
 }
 
-pub fn update_no_pad<T: Ord+Clone, V: SortVec<T>>(tree: &Tree<T>, start_index: usize, vec: &mut V) -> usize {
+// similar to update, but compacts the data and truncates the vec
+pub fn update_no_pad<T: Ord+Clone, V: SortVec<T>>(tree: &Tree<T>, free_index: usize, vec: &mut V) -> usize {
+    let length = update_no_pad_internal(tree, free_index, vec);
+    vec.truncate(length);
+    length
+}
+
+fn update_no_pad_internal<T: Ord+Clone, V: SortVec<T>>(tree: &Tree<T>, free_index: usize, vec: &mut V) -> usize {
     let mut tree = tree.borrow_mut();
-    let mut size = tree.old_size;
-    if tree.needs_update || vec.len() < start_index + size {
-        if vec.len() <= start_index {
-            vec.push(tree.data.clone());
+    // move if wrong place
+    if tree.vec_index != free_index {
+        tree.vec_index = free_index;
+        tree.needs_update = true;
+        tree.dirty_val = true;
+    }
+    let mut next_free_index = tree.vec_index + 1;
+    if tree.needs_update {
+        // update value
+        if vec.len() == tree.vec_index {
+            vec.push(tree.data.clone())
         } else if tree.dirty_val {
-            vec.set(start_index, tree.data.clone());
+            vec.set(tree.vec_index, tree.data.clone())
         }
         tree.dirty_val = false;
-        size = 1;
-        for kid in &tree.children { size += update_no_pad(&kid, start_index + size, vec); }
+        // update kids
+        for kid in &tree.children {
+            next_free_index = update_no_pad_internal(&kid, next_free_index, vec);
+        }
         tree.needs_update = false;
-        if tree.old_size != size {
-            vec.truncate(start_index + size);
-            tree.old_size = size;
+    } else {
+        // find last index
+        let num_children = tree.children.len();
+        if num_children > 0 {
+            next_free_index = tree.children[num_children - 1].borrow().vec_index + 1;
         }
     }
-    size
+    next_free_index
 }

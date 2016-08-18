@@ -1,4 +1,6 @@
 use presort::{PresortedVec, PermutedVec};
+use presort::permuted_vec::PermutedIter;
+use presort::presorted_vec::PresortedIter;
 
 pub trait SortVec<T: Ord> {
     /// The length of the vector.
@@ -80,14 +82,32 @@ impl<T: Ord> SortVec<T> for PermutedVec<T> {
     }
 }
 
-impl<'a, T: Ord + Clone> IntoSortedIterator for &'a Vec<T> {
-    type Item = T;
-    type IntoSortedIter = ::std::vec::IntoIter<T>;
+impl<'a, T: Ord> IntoSortedIterator for &'a Vec<T> {
+    type Item = &'a T;
+    type IntoSortedIter = ::std::vec::IntoIter<&'a T>;
 
-    fn into_sorted_iter(self) -> ::std::vec::IntoIter<T>{
-        let mut sorted = self.clone();
-        sorted.sort();
+    fn into_sorted_iter(self) -> ::std::vec::IntoIter<&'a T>{
+        let mut sorted: Vec<&T> = self.iter().collect();
+        sorted.sort_by(|a,b| {(*a).cmp(*b)});
         sorted.into_iter()
     }
 }
 
+impl<'a, T: Ord> IntoSortedIterator for &'a mut PermutedVec<T> {
+    type Item = &'a T;
+    type IntoSortedIter = PermutedIter<'a, T>;
+
+    fn into_sorted_iter(self) -> Self::IntoSortedIter {
+        self.sorted_iter_by(|a,b|{a.cmp(b)})
+    }
+}
+
+impl<'a, T: Ord> IntoSortedIterator for &'a mut PresortedVec<T> {
+    type Item = &'a T;
+    type IntoSortedIter = PresortedIter<'a, T>;
+
+    fn into_sorted_iter(self) -> Self::IntoSortedIter {
+        self.sorted_iter()
+    }
+
+}

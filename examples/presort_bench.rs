@@ -128,11 +128,11 @@ fn main() {
         //initial dump
         dur_dump.push(Duration::span(||{
             match vec {
-                VecVersion::Vec(ref mut v) => dump(&tree, v),
-                VecVersion::Presort(ref mut v) => dump(&tree, v),
-                VecVersion::PrePad(ref mut v) => dump(&tree, v),
-                VecVersion::Permut(ref mut v) => dump(&tree, v),
-                VecVersion::PerPad(ref mut v) => dump(&tree, v),
+                VecVersion::Vec(ref mut v) => dump(&tree, 0, v),
+                VecVersion::Presort(ref mut v) => dump(&tree, 0, v),
+                VecVersion::PrePad(ref mut v) => dump(&tree, 0, v),
+                VecVersion::Permut(ref mut v) => dump(&tree, 0, v),
+                VecVersion::PerPad(ref mut v) => dump(&tree, 0, v),
             };
         }).num_nanoseconds().unwrap());
 
@@ -273,11 +273,14 @@ fn add_branches(tree: &Tree<usize>, high_depth: usize, adds: usize) {
 }
 
 fn remove_branches(tree: &Tree<usize>, high_depth: usize, removes: usize, give_up: usize) {
+    let mut rng = rand::thread_rng();
     let mut i = 0;
     let mut fails = 0;
     while i<removes {
         let t = random_subtree(tree, high_depth);
-        if let Some(_) = t.pop_child() {
+        if t.num_children() > 0 {
+            let rnd_child = rng.gen::<usize>() % t.num_children();
+            t.remove_child(rnd_child);
             i += 1; fails = 0;
         } else {
             fails += 1;
@@ -287,4 +290,3 @@ fn remove_branches(tree: &Tree<usize>, high_depth: usize, removes: usize, give_u
         }
     }
 }
-
