@@ -1,5 +1,5 @@
 # name of experiment
-EXPR="removals"
+EXPR="data_batches"
 
 # files created/overwritten
 DATA="../target/data/${EXPR}.data"
@@ -7,7 +7,7 @@ PLOT="../target/data/${EXPR}.pdf"
 
 # benchmark program and fixed parameters
 BENCH="cargo run --release --example presort_bench --"
-ARGS="--tag ${EXPR} -t 50 -e 100 -s 1 -a 0"
+ARGS="--tag ${EXPR} -t 50 -s 0 -c 0.1"
 VERS="vec presort presort_pad permute permute_pad"
 
 # Collect Data
@@ -25,12 +25,8 @@ if [ $# = 0 ]; then
 		$BENCH -h -t 0 -o $DATA
 
 		# run benches
-		for nodes in `seq 10000 10000 100000`; do
-			# log-2 of nodes
-			depth=$(echo "l($nodes)/l(2)" | bc -l)
-			# truncate to integer
-			depth=$(echo "$depth/1" | bc)
-			$BENCH $ARGS --$ver -d $depth -n $nodes -o $DATA
+		for edits in 1 3 10 33 100 333 1000 3333 10000; do
+			$BENCH $ARGS --$ver -e $edits -o $DATA
 		done
 
 		# separate by 2 lines for gnuplot data indexes
@@ -55,13 +51,15 @@ set terminal pdf
 set output '$PLOT'
 # compute stddev sum
 ss(x,y) = sqrt((x**2 + y**2) / 2)
+# this a log plot
+set logscale x
 # plot lines
 plot \\" > gnuplotscript
 
 i=0
 for ver in $VERS; do
 	# add plot line for version
-	echo "'$DATA' i $i using (\$6+${i}*1000):(\$17+\$19):(ss(\$18,\$20)) \\" >> gnuplotscript
+	echo "'$DATA' i $i using (\$7*(1+${i}*0.1)):(\$17+\$19):(ss(\$18,\$20)) \\" >> gnuplotscript
 	echo "title '$ver update+sort time' with errorbars, \\" >> gnuplotscript
 	((i++))
 done

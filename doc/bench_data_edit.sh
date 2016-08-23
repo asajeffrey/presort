@@ -25,7 +25,7 @@ if [ $# = 0 ]; then
 		$BENCH -h -t 0 -o $DATA
 
 		# run benches
-		for nodes in `seq 100 10000 100000`; do
+		for nodes in `seq 10000 10000 100000`; do
 			# log-2 of nodes
 			depth=$(echo "l($nodes)/l(2)" | bc -l)
 			# truncate to integer
