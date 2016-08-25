@@ -17,6 +17,8 @@ use stats::{mean,stddev};
 use inc_tree::{Tree, IncTree, dump, update, update_no_pad};
 use inc_tree::sortvec::SortVec;
 
+const ADD_SIZE: usize = 5;
+
 fn main() {
     //command-line
     let args = App::new("presort_bench")
@@ -152,9 +154,9 @@ fn main() {
             let mut rng = rand::thread_rng();
             if rng.gen::<f32>() < s {
                 if rng.gen::<f32>() < a {
-                    add_branches(&tree, d, e);
+                    add_branches(&tree, d, e, ADD_SIZE);
                 } else {
-                    remove_branches(&tree, d, e, 10);
+                    remove_branches(&tree, d, e);
                 }
             } else {
                 if rng.gen::<f32>() < c {
@@ -263,30 +265,20 @@ fn incr_vals(tree: &Tree<usize>, high_depth: usize, edits: usize) {
     }
 }
 
-fn add_branches(tree: &Tree<usize>, high_depth: usize, adds: usize) {
+fn add_branches(tree: &Tree<usize>, high_depth: usize, adds: usize, new_nodes: usize) {
     for _ in 0..adds {
-        let new_hight = high_depth / 2;
-        let new_nodes = (new_hight as f32 / 2.0).log(2.0) as usize;
+        let new_hight = (new_nodes as f32).log(2.0) as usize;
         let branch = build_tree(new_hight, new_nodes);
         random_subtree(tree, high_depth).push_child(branch);
     }
 }
 
-fn remove_branches(tree: &Tree<usize>, high_depth: usize, removes: usize, give_up: usize) {
-    let mut rng = rand::thread_rng();
-    let mut i = 0;
-    let mut fails = 0;
-    while i<removes {
+fn remove_branches(tree: &Tree<usize>, high_depth: usize, removes: usize) {
+    for _ in 0..removes {
         let t = random_subtree(tree, high_depth);
-        if t.num_children() > 0 {
-            let rnd_child = rng.gen::<usize>() % t.num_children();
-            t.remove_child(rnd_child);
-            i += 1; fails = 0;
-        } else {
-            fails += 1;
-            if fails >= give_up {
-                i += 1; fails = 0;
-            }
+        // remove this branch, unless it's root
+        if let Some((parent, index)) = t.get_parent() {
+            parent.remove_child(index);
         }
     }
 }

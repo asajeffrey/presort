@@ -29,6 +29,7 @@ pub trait IncTree<T: PartialEq + Clone> {
     fn flag_as_updated(&self);
     fn get_data(&self) -> T;
     fn set_data(&self, data: T);
+    fn get_parent(&self) -> Option<(Tree<T>, usize)>;
     fn get_child(&self, child_num: usize) -> Tree<T>;
     fn set_child(&self, child_num: usize, child: Tree<T>);
     fn push_child(&self, child: Tree<T>);
@@ -81,6 +82,11 @@ impl<T: PartialEq + Clone> IncTree<T> for Tree<T> {
             tree.dirty_val = true;
         }
         self.flag_as_updated();
+    }
+
+    // unless this is a root, it returns parent tree and the index of the child
+    fn get_parent(&self) -> Option<(Tree<T>, usize)> {
+        self.borrow().parent.clone() //Rc clone
     }
 
     fn get_child(&self, child_num: usize) -> Tree<T> {
