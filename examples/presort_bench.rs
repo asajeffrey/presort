@@ -199,7 +199,7 @@ fn main() {
         else if args.is_present("permute_pad") {"permute_pad"}
         else {"vec"};
 
-    writeln!(o, "{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}",
+    writeln!(o, "{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{:.5}\t{:.5}\t{:.5}\t{:.5}\t{:.5}\t{:.5}\t{:.5}\t{:.5}\t{:.5}\t{:.5}",
         time::precise_time_s() as usize,
         tag,vec,b,d,n,e,s,a,c,
         mean(dur_dump.clone().into_iter()), stddev(dur_dump.into_iter()),
