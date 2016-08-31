@@ -117,7 +117,7 @@ fn main() {
             } else if args.is_present("presort_pad") {
                 VecVersion::PrePad(PresortedVec::new())
             } else if args.is_present("permute") {
-                VecVersion::Permut(PermutedVec::new())
+                VecVersion::Permute(PermutedVec::new())
             } else if args.is_present("permute_pad") {
                 VecVersion::PerPad(PermutedVec::new())
             } else {
@@ -133,10 +133,12 @@ fn main() {
                 VecVersion::Vec(ref mut v) => dump(&tree, 0, v),
                 VecVersion::Presort(ref mut v) => dump(&tree, 0, v),
                 VecVersion::PrePad(ref mut v) => dump(&tree, 0, v),
-                VecVersion::Permut(ref mut v) => dump(&tree, 0, v),
+                VecVersion::Permute(ref mut v) => dump(&tree, 0, v),
                 VecVersion::PerPad(ref mut v) => dump(&tree, 0, v),
             };
         }).num_nanoseconds().unwrap());
+
+        //println!("dump: {:?}", vec);
 
         //initial sort
         dur_init_sort.push(Duration::span(||{
@@ -144,24 +146,30 @@ fn main() {
                 VecVersion::Vec(ref mut v) => v.sort(),
                 VecVersion::Presort(ref mut v) => v.sort(),
                 VecVersion::PrePad(ref mut v) => v.sort(),
-                VecVersion::Permut(ref mut v) => v.sort(),
+                VecVersion::Permute(ref mut v) => v.sort(),
                 VecVersion::PerPad(ref mut v) => v.sort(),
             };
         }).num_nanoseconds().unwrap());
+
+        //println!("sort: {:?}", vec);
 
         //modify tree
         dur_modify.push(Duration::span(||{
             let mut rng = rand::thread_rng();
             if rng.gen::<f32>() < s {
                 if rng.gen::<f32>() < a {
+                    //println!("add");
                     add_branches(&tree, d, e, ADD_SIZE);
                 } else {
+                    //println!("remove");
                     remove_branches(&tree, d, e);
                 }
             } else {
                 if rng.gen::<f32>() < c {
+                    //println!("mutate");
                     mutate_vals(&tree, d, e);
                 } else {
+                    //println!("incr");
                     incr_vals(&tree, d, e);
                 }
             }
@@ -173,10 +181,12 @@ fn main() {
                 VecVersion::Vec(ref mut v) => update_no_pad(&tree, 0, v),
                 VecVersion::Presort(ref mut v) => update_no_pad(&tree, 0, v),
                 VecVersion::PrePad(ref mut v) => update(&tree, 0, v),
-                VecVersion::Permut(ref mut v) => update_no_pad(&tree, 0, v),
+                VecVersion::Permute(ref mut v) => update_no_pad(&tree, 0, v),
                 VecVersion::PerPad(ref mut v) => update(&tree, 0, v),
             };
         }).num_nanoseconds().unwrap());
+
+        //println!("update: {:?}", vec);
 
         //sort tree
         dur_sort.push(Duration::span(||{
@@ -184,14 +194,17 @@ fn main() {
                 VecVersion::Vec(ref mut v) => v.sort(),
                 VecVersion::Presort(ref mut v) => v.sort(),
                 VecVersion::PrePad(ref mut v) => v.sort(),
-                VecVersion::Permut(ref mut v) => v.sort(),
+                VecVersion::Permute(ref mut v) => v.sort(),
                 VecVersion::PerPad(ref mut v) => v.sort(),
             };
         }).num_nanoseconds().unwrap());
+
+        //println!("sort: {:?}", vec);
+
     }
 
     //write out results
-    let vec =
+    let vec_type =
         if args.is_present("vec") {"vec"}
         else if args.is_present("presort") {"presort"}
         else if args.is_present("presort_pad") {"presort_pad"}
@@ -201,20 +214,22 @@ fn main() {
 
     writeln!(o, "{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{:.5}\t{:.5}\t{:.5}\t{:.5}\t{:.5}\t{:.5}\t{:.5}\t{:.5}\t{:.5}\t{:.5}",
         time::precise_time_s() as usize,
-        tag,vec,b,d,n,e,s,a,c,
+        tag,vec_type,b,d,n,e,s,a,c,
         mean(dur_dump.clone().into_iter()), stddev(dur_dump.into_iter()),
         mean(dur_init_sort.clone().into_iter()), stddev(dur_init_sort.into_iter()),
         mean(dur_modify.clone().into_iter()), stddev(dur_modify.into_iter()),
         mean(dur_update.clone().into_iter()), stddev(dur_update.into_iter()),
         mean(dur_sort.clone().into_iter()), stddev(dur_sort.into_iter()),
     ).unwrap();
+
 }
 
+#[derive(Debug)]
 enum VecVersion<T: Ord> {
     Vec(Vec<T>),
     Presort(PresortedVec<T>),
     PrePad(PresortedVec<T>),
-    Permut(PermutedVec<T>),
+    Permute(PermutedVec<T>),
     PerPad(PermutedVec<T>),
 }
 
