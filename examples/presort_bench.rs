@@ -12,7 +12,7 @@ use std::io::Write;
 use rand::Rng;
 use time::Duration;
 use clap::{App, Arg};
-use presort::{PresortedVec, PermutedVec};
+use presort::{PresortedVec, PermutedVec, MergeVec};
 use stats::{mean,stddev};
 use inc_tree::{Tree, IncTree, dump, update, update_no_pad};
 use inc_tree::sortvec::SortVec;
@@ -25,23 +25,31 @@ fn main() {
     .arg(Arg::with_name("vec")
         .long("vec")
         .help("Use the default vector implementation")
-        .conflicts_with_all(&["presort","presort_pad","permute","permute_pad"])
+        .conflicts_with_all(&["presort","presort_pad","permute","permute_pad","merge","merge_pad"])
     ).arg(Arg::with_name("presort")
         .long("presort")
         .help("Use the presorted vector implementation")
-        .conflicts_with_all(&["vec","presort_pad","permute","permute_pad"])
+        .conflicts_with_all(&["vec","presort_pad","permute","permute_pad","merge","merge_pad"])
     ).arg(Arg::with_name("presort_pad")
         .long("presort_pad")
         .help("Use the persorted vector implementation with padding")
-        .conflicts_with_all(&["vec","presort","permute","permute_pad"])
+        .conflicts_with_all(&["vec","presort","permute","permute_pad","merge","merge_pad"])
     ).arg(Arg::with_name("permute")
         .long("permute")
         .help("Use the permuted vector implementation")
-        .conflicts_with_all(&["vec","presort","persort_pad","permute_pad"])
+        .conflicts_with_all(&["vec","presort","persort_pad","permute_pad","merge","merge_pad"])
     ).arg(Arg::with_name("permute_pad")
         .long("permute_pad")
         .help("Use the permuted vector implementation with padding")
-        .conflicts_with_all(&["vec","presort","persort_pad","permute"])
+        .conflicts_with_all(&["vec","presort","persort_pad","permute","merge","merge_pad"])
+    ).arg(Arg::with_name("merge")
+        .long("merge")
+        .help("Use the permuted vector implementation with padding")
+        .conflicts_with_all(&["vec","presort","persort_pad","permute","permut_pad","merge_pad"])
+    ).arg(Arg::with_name("merge_pad")
+        .long("merge_pad")
+        .help("Use the permuted vector implementation with padding")
+        .conflicts_with_all(&["vec","presort","persort_pad","permute","permute_pad","merge"])
     ).args_from_usage("\
         --tag [tag]                                 'max depth of initial tree'
         [data_size] -b [data_size]                  'data size in bytes (unused)'
@@ -120,6 +128,10 @@ fn main() {
                 VecVersion::Permute(PermutedVec::new())
             } else if args.is_present("permute_pad") {
                 VecVersion::PerPad(PermutedVec::new())
+            } else if args.is_present("merge") {
+                VecVersion::Merge(MergeVec::new())
+            } else if args.is_present("merge_pad") {
+                VecVersion::MerPad(MergeVec::new())
             } else {
                 VecVersion::Vec(Vec::new())
             };
@@ -135,6 +147,8 @@ fn main() {
                 VecVersion::PrePad(ref mut v) => dump(&tree, 0, v),
                 VecVersion::Permute(ref mut v) => dump(&tree, 0, v),
                 VecVersion::PerPad(ref mut v) => dump(&tree, 0, v),
+                VecVersion::Merge(ref mut v) => dump(&tree, 0, v),
+                VecVersion::MerPad(ref mut v) => dump(&tree, 0, v),
             };
         }).num_nanoseconds().unwrap());
 
@@ -148,6 +162,8 @@ fn main() {
                 VecVersion::PrePad(ref mut v) => v.sort(),
                 VecVersion::Permute(ref mut v) => v.sort(),
                 VecVersion::PerPad(ref mut v) => v.sort(),
+                VecVersion::Merge(ref mut v) => v.sort(),
+                VecVersion::MerPad(ref mut v) => v.sort(),
             };
         }).num_nanoseconds().unwrap());
 
@@ -183,6 +199,8 @@ fn main() {
                 VecVersion::PrePad(ref mut v) => update(&tree, 0, v),
                 VecVersion::Permute(ref mut v) => update_no_pad(&tree, 0, v),
                 VecVersion::PerPad(ref mut v) => update(&tree, 0, v),
+                VecVersion::Merge(ref mut v) => update_no_pad(&tree, 0, v),
+                VecVersion::MerPad(ref mut v) => update(&tree, 0, v),
             };
         }).num_nanoseconds().unwrap());
 
@@ -196,6 +214,8 @@ fn main() {
                 VecVersion::PrePad(ref mut v) => v.sort(),
                 VecVersion::Permute(ref mut v) => v.sort(),
                 VecVersion::PerPad(ref mut v) => v.sort(),
+                VecVersion::Merge(ref mut v) => v.sort(),
+                VecVersion::MerPad(ref mut v) => v.sort(),
             };
         }).num_nanoseconds().unwrap());
 
@@ -210,6 +230,8 @@ fn main() {
         else if args.is_present("presort_pad") {"presort_pad"}
         else if args.is_present("permute") {"permute"}
         else if args.is_present("permute_pad") {"permute_pad"}
+        else if args.is_present("merge") {"merge"}
+        else if args.is_present("merge_pad") {"merge_pad"}
         else {"vec"};
 
     writeln!(o, "{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{:.5}\t{:.5}\t{:.5}\t{:.5}\t{:.5}\t{:.5}\t{:.5}\t{:.5}\t{:.5}\t{:.5}",
@@ -225,12 +247,14 @@ fn main() {
 }
 
 #[derive(Debug)]
-enum VecVersion<T: Ord> {
+enum VecVersion<T: Ord + Clone> {
     Vec(Vec<T>),
     Presort(PresortedVec<T>),
     PrePad(PresortedVec<T>),
     Permute(PermutedVec<T>),
     PerPad(PermutedVec<T>),
+    Merge(MergeVec<T>),
+    MerPad(MergeVec<T>),
 }
 
 //creates a random tree with the requested parameters

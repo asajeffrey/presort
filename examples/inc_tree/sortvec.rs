@@ -1,4 +1,4 @@
-use presort::{PresortedVec, PermutedVec};
+use presort::{PresortedVec, PermutedVec, MergeVec};
 use presort::permuted_vec::PermutedIter;
 use presort::presorted_vec::PresortedIter;
 
@@ -79,6 +79,24 @@ impl<T: Ord> SortVec<T> for PermutedVec<T> {
     }
     fn sort(&mut self) {
         self.sort_by(|a,b| { a.cmp(b) })
+    }
+}
+
+impl<T: Ord + Clone> SortVec<T> for MergeVec<T> {
+    fn len(&self) -> usize {
+        self.len()
+    }
+    fn push(&mut self, val: T) {
+        self.push(val)
+    }
+    fn set(&mut self, index: usize, val: T) {
+        self.set(index, val)
+    }
+    fn truncate(&mut self, size: usize) {
+        self.truncate(size)
+    }
+    fn sort(&mut self) {
+        self.sort()
     }
 }
 

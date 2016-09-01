@@ -8,7 +8,7 @@ PLOT="../target/data/${EXPR}.pdf"
 # benchmark program and fixed parameters
 BENCH="cargo run --release --example presort_bench --"
 ARGS="--tag ${EXPR} -t 50 -e 100 -s 1 -a 0"
-VERS="vec presort presort_pad permute permute_pad"
+VERS="vec presort presort_pad permute permute_pad merge merge_pad"
 
 # Collect Data
 # ------------
