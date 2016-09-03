@@ -1,26 +1,104 @@
-use std::slice;
 
 /// The type of merge vectors.
-#[derive(Clone,Debug,Eq,PartialEq)]
-pub struct MergeVec<T> where T: Ord + Clone {
-    status: Vec<Option<usize>>,
-    sorted: Vec<T>,
-    new_vals: Vec<T>
+#[derive(Clone,Debug)]
+pub struct MergeVec<T> where T: Ord {
+    content: Vec<T>,                // the content changed only by user
+    sort_index: Vec<usize>,         // where the sort reference is stored
+    sorted: Vec<SortTarget>,        //  holes if changed
+    unsorted: Vec<Option<usize>>    // new, unsorted content
 }
 
-impl<T> MergeVec<T> where T: Ord + Clone{
+#[derive(Clone,Copy,Debug)]
+enum SortTarget {
+    Content(usize),
+    Unsorted(usize),
+    Removed,
+}
+
+struct ContentIter<'a> {
+    index: usize,
+    vec: &'a Vec<SortTarget>,
+}
+
+impl<'a> Iterator for ContentIter<'a> {
+    type Item = usize;
+    fn next(&mut self) -> Option<usize> {
+        while self.index < self.vec.len() {
+            let i = self.index;
+            self.index += 1;
+            if let SortTarget::Content(c) = self.vec[i] {
+                return Some(c);
+            }
+        }
+        return None
+    }
+}
+
+struct OpContentIter<'a> {
+    index: usize,
+    vec: &'a Vec<Option<usize>>,
+}
+
+impl<'a> Iterator for OpContentIter<'a> {
+    type Item = usize;
+    fn next(&mut self) -> Option<usize> {
+        while self.index < self.vec.len() {
+            let i = self.index;
+            self.index += 1;
+            if let Some(c) = self.vec[i] {
+                return Some(c);
+            }
+        }
+        return None
+    }
+}
+
+#[derive(Clone,Debug)]
+pub struct MergeVecIter<'a, T> where T: 'a {
+    index: usize,
+    content: &'a[T],
+    sort_order: &'a[SortTarget],
+}
+
+impl<'a, T> Iterator for MergeVecIter<'a, T> where T: 'a {
+    type Item = &'a T;
+    fn next(&mut self) -> Option<&'a T> {
+        let sorted_index = self.index;
+        self.index += 1;
+        self.sort_order.get(sorted_index).and_then(|&target| {
+            match target {
+                SortTarget::Content(i) => self.content.get(i),
+                _ => None
+            }  
+        })
+    }
+}
+
+impl<T> MergeVec<T> where T: Ord {
     /// The length of the vector.
     pub fn len(&self) -> usize {
-        self.sorted.len()
+        self.content.len()
     }
 
-    /// Append an element to the end of the vector.
+    /// Append an element to the end of the content.
     pub fn push(&mut self, value: T) {
         //println!("vec push index {:?}", self.len());
-        let index = self.new_vals.len();
-        self.sorted.push(value.clone()); // TODO: only need size change
-        self.status.push(Some(index));
-        self.new_vals.push(value);
+
+        let content_index = self.content.len();
+        if value >= self.content[content_index] {
+            // in order
+            let sort_index = self.sorted.len();
+            self.sort_index.push(sort_index);  
+            self.sorted.push(SortTarget::Content(content_index));
+        } else {
+            // out of order
+            let new_index = self.unsorted.len();
+            let sort_index = self.sorted.len();
+            self.sort_index.push(sort_index);  
+            self.sorted.push(SortTarget::Unsorted(new_index));
+            self.unsorted.push(Some(content_index));
+        }
+        self.content.push(value);
     }
 
     
@@ -28,145 +106,153 @@ impl<T> MergeVec<T> where T: Ord + Clone{
     /// Panics if the vector contains fewer than `i` elements.
     pub fn set(&mut self, index: usize, value: T) {
         //println!("vec set index {:?}", index);
-        let status = self.status[index];
-        match  status {
-            None => {
-                let new_index = self.new_vals.len();
-                self.new_vals.push(value);
-                self.status[index] = Some(new_index);
-            },
-            Some(new_index) => {
-                self.new_vals[new_index] = value;
+        let sort_index = self.sort_index[index];
+        let old_loc = self.sorted[sort_index];
+        match old_loc {
+            SortTarget::Content(_) => {
+                if !self.would_be_sorted(sort_index, &value) {
+                    let new_index = self.unsorted.len();
+                    self.sorted[sort_index] = SortTarget::Unsorted(new_index);
+                    self.unsorted.push(Some(index));
+                }
+            }
+            SortTarget::Unsorted(unsort_index) => {
+                if self.would_be_sorted(sort_index, &value) {
+                    self.unsorted[unsort_index] = None;
+                    self.sorted[sort_index] = SortTarget::Content(index);
+                }
+            }
+            SortTarget::Removed => {
+                if self.would_be_sorted(sort_index, &value) {
+                    self.sorted[sort_index] = SortTarget::Content(index);
+                } else {
+                    let new_index = self.unsorted.len();
+                    self.sorted[sort_index] = SortTarget::Unsorted(new_index);
+                    self.unsorted.push(Some(index));
+                }
             }
         }
+        self.content[index] = value;
+    }
+
+    fn would_be_sorted(&self, sort_index: usize, value: &T) -> bool {
+        if sort_index > 0 {
+            if let SortTarget::Content(content_index) = self.sorted[sort_index - 1] {
+                if self.content[content_index] > *value { return false; }
+            } else {
+                // TODO: Should we search through unsorted/removed values?
+                return false;
+            }
+        }
+        if sort_index < self.sorted.len() - 1 {
+            if let SortTarget::Content(content_index) = self.sorted[sort_index + 1] {
+                if self.content[content_index] < *value { return false; }
+            } else {
+                // TODO: Should we search through unsorted/removed values?
+                return false;
+            }
+        }
+        return true;
     }
 
     
-    /// Truncate this vector and reset the sort if necessary.
+    /// Truncate this vector.
     pub fn truncate(&mut self, len: usize) {
         //println!("vec truncate to {:?}", len);
-        if len >= self.sorted.len() { return; }
-        if len <= 0 { *self = MergeVec::new(); return; }
-        let old_new_length = self.new_vals.len();
-        if old_new_length > 0 {
-            let mut new_new_vals = Vec::with_capacity(old_new_length);
-            let mut remaining = old_new_length;
-            let mut index = 0;
-            while remaining > 0 && index < len {
-                let status = self.status[index];
-                match status {
-                    None => {},
-                    Some(new_index) => {
-                        self.status[index] = Some(new_new_vals.len());
-                        new_new_vals.push(self.new_vals[new_index].clone());
-                        remaining -= 1;
-                    }
-                }
-                index += 1;
+
+        // remove all linked values
+        for index in len..self.content.len() {
+            let sort_index = self.sort_index[index];
+            match self.sorted[sort_index] {
+                SortTarget::Content(_) => self.sorted[sort_index] = SortTarget::Removed,
+                SortTarget::Unsorted(unsort_index) => {
+                    self.unsorted[unsort_index] = None;
+                    self.sorted[sort_index] = SortTarget::Removed;
+                },
+                SortTarget::Removed => {}
             }
-            self.new_vals = new_new_vals;
         }
-        self.status.truncate(len);
-        self.sorted.truncate(len);
+        //truncate data
+        self.content.truncate(len);
+        self.sort_index.truncate(len);
     }
     
     /// Create a new, empty vector.
     pub fn new() -> MergeVec<T> {
         MergeVec {
-            status: Vec::new(),
+            content: Vec::new(),
+            sort_index: Vec::new(),
             sorted: Vec::new(),
-            new_vals: Vec::new(),
+            unsorted: Vec::new(),
         }
     }
 
-    /// Sort the vector, merging the new values in
+    /// Consolidate incremental data, in preparation of producing a sorted iterator
     pub fn sort(&mut self) {
-        // TODO: use iterators to simplify this code
-
-        let mut new_sorted = Vec::with_capacity(self.sorted.len());
-        self.new_vals.sort();
-        // 2 degenerate cases
-        if self.new_vals.len() == 0 {
-            let mut s_index = 0;
-            while s_index < self.sorted.len() {
-                if self.status[s_index] == None{
-                    new_sorted.push(self.sorted[s_index].clone())
-                }
-                s_index += 1;
+        self.unsorted.sort();
+        let mut new_sort = Vec::with_capacity(self.content.len());
+        {
+            let mut a_iter = ContentIter { index: 0, vec: &self.sorted};
+            let mut b_iter = OpContentIter { index: 0, vec: &self.unsorted};
+            let mut op_a = a_iter.next();
+            let mut op_b = b_iter.next();
+            // merge
+            loop {
+                if let Some(index_a) = op_a {
+                if let Some(index_b) = op_b {
+                    if self.content[index_a] <= self.content[index_b] {
+                        self.sort_index[index_a] = new_sort.len();
+                        new_sort.push(SortTarget::Content(index_a));
+                        op_a = a_iter.next();
+                    } else {
+                        self.sort_index[index_b] = new_sort.len();
+                        new_sort.push(SortTarget::Content(index_b));
+                        op_b = b_iter.next();
+                    }
+                } else { break; }
+                } else { break; }
             }
-        } else if self.sorted.len() == 0 {
-            new_sorted = self.new_vals.clone();
-        } else {
-            // general case
-            let mut s_index = 0;
-            let mut n_index = 0;
-            while new_sorted.len() < self.sorted.len() {
-                if self.status[s_index] != None {
-                    // skip modified values
-                    s_index += 1;
-                    if s_index == self.sorted.len() {
-                        // write the rest of the sorted values to the new vec
-                        while n_index < self.new_vals.len() {
-                            new_sorted.push(self.new_vals[n_index].clone());
-                            n_index += 1;
-                        }
-                    }
-                } else if self.new_vals[n_index] < self.sorted[s_index] {
-                    // merge in the new value
-                    new_sorted.push(self.new_vals[n_index].clone());
-                    n_index += 1;
-                    if n_index == self.new_vals.len() {
-                        // write the rest of the old values to the new vec
-                        while s_index < self.sorted.len() {
-                            if self.status[s_index] == None{
-                                new_sorted.push(self.sorted[s_index].clone())
-                            }
-                            s_index += 1;
-                        }
-                    }
-                } else {
-                    // merge in the sorted value
-                    new_sorted.push(self.sorted[s_index].clone());
-                    s_index += 1;
-                    if s_index == self.sorted.len() {
-                        // write the rest of the sorted values to the new vec
-                        while n_index < self.new_vals.len() {
-                            new_sorted.push(self.sorted[s_index].clone());
-                            n_index += 1;
-                        }
-                    }
-                }
+            // add data from longer iter
+            while let Some(index_a) = op_a {
+                self.sort_index[index_a] = new_sort.len();
+                new_sort.push(SortTarget::Content(index_a));
+                op_a = a_iter.next();
+            }
+            while let Some(index_b) = op_b {
+                self.sort_index[index_b] = new_sort.len();
+                new_sort.push(SortTarget::Content(index_b));
+                op_b = b_iter.next();
             }
         }
-        // reset with the new sorted values
-        self.sorted = new_sorted;
-        self.status = vec![None; self.sorted.len()];
-        self.new_vals = Vec::new();
+        //finalize vecs
+        self.sorted = new_sort;
+        self.unsorted = Vec::new();
     }
 
-    pub fn sorted_iter(&mut self) -> slice::Iter<T> {
+    pub fn sorted_iter(&mut self) -> MergeVecIter<T> {
         self.sort();
-        self.sorted.iter()
+        MergeVecIter {
+            index: 0,
+            content: &self.content,
+            sort_order: &self.sorted,
+        }
     }
 
     /// Get the `i`th element of the vector.
     /// Returns `None` if the vector contains fewer than `i` elements.
     pub fn get(&self, index: usize) -> Option<&T> {
-        if index >= self.status.len() { return None; }
-        let status = self.status[index];
-        match status {
-            None => { Some(&self.sorted[index]) },
-            Some(new_index) => { Some(&self.new_vals[new_index]) }
-        }
+        self.content.get(index)
     }
 }
 
 impl<T> From<Vec<T>> for MergeVec<T> where T: Ord + Clone {
     fn from(vec: Vec<T>) -> MergeVec<T> {
+        let length = vec.len();
         MergeVec {
-            status: (0..vec.len()).map(|v| Some(v)).collect(),
-            sorted: vec.clone(),
-            new_vals: vec,
+            content: vec,
+            sort_index: (0..length).collect(),
+            sorted: (0..length).map(|i| SortTarget::Unsorted(i)).collect(),
+            unsorted: (0..length).map(|i| Some(i)).collect(),
         }
     }
 }
