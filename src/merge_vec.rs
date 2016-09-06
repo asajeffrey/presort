@@ -1,3 +1,5 @@
+use std::cmp::Ordering;
+
 
 /// The type of merge vectors.
 #[derive(Clone,Debug)]
@@ -15,6 +17,7 @@ enum SortTarget {
     Removed,
 }
 
+#[derive(Debug)]
 struct ContentIter<'a> {
     index: usize,
     vec: &'a Vec<SortTarget>,
@@ -34,6 +37,7 @@ impl<'a> Iterator for ContentIter<'a> {
     }
 }
 
+#[derive(Debug)]
 struct OpContentIter<'a> {
     index: usize,
     vec: &'a Vec<Option<usize>>,
@@ -74,6 +78,18 @@ impl<'a, T> Iterator for MergeVecIter<'a, T> where T: 'a {
     }
 }
 
+// borrow helper to separate the two fields into different mutability classes
+fn sort_new_indexes<T: Ord>(indexes: &mut Vec<Option<usize>>, content: &Vec<T>) {
+    indexes.sort_by(|&a,&b| {
+        match (a, b) {
+            (None, None) => Ordering::Equal,
+            (None, _) => Ordering::Less,
+            (_, None) => Ordering::Greater,
+            (Some(a), Some(b)) => { content[a].cmp(&content[b]) }
+        }
+    });
+}
+
 impl<T> MergeVec<T> where T: Ord {
     /// The length of the vector.
     pub fn len(&self) -> usize {
@@ -84,11 +100,18 @@ impl<T> MergeVec<T> where T: Ord {
     pub fn push(&mut self, value: T) {
         //println!("vec push index {:?}", self.len());
 
+        if self.content.len() == 0 {
+            // empty
+            self.sort_index.push(0);
+            self.sorted.push(SortTarget::Content(0));
+            self.content.push(value);
+            return;
+        }
         let content_index = self.content.len();
-        if value >= self.content[content_index] {
+        if value >= self.content[content_index - 1] {
             // in order
             let sort_index = self.sorted.len();
-            self.sort_index.push(sort_index);  
+            self.sort_index.push(sort_index);
             self.sorted.push(SortTarget::Content(content_index));
         } else {
             // out of order
@@ -189,7 +212,7 @@ impl<T> MergeVec<T> where T: Ord {
 
     /// Consolidate incremental data, in preparation of producing a sorted iterator
     pub fn sort(&mut self) {
-        self.unsorted.sort();
+        sort_new_indexes(&mut self.unsorted, &self.content);
         let mut new_sort = Vec::with_capacity(self.content.len());
         {
             let mut a_iter = ContentIter { index: 0, vec: &self.sorted};
@@ -227,6 +250,7 @@ impl<T> MergeVec<T> where T: Ord {
         //finalize vecs
         self.sorted = new_sort;
         self.unsorted = Vec::new();
+
     }
 
     pub fn sorted_iter(&mut self) -> MergeVecIter<T> {
@@ -284,6 +308,29 @@ fn test_push() {
     assert_eq!(vec.get(3), None);
     assert_eq!(vec.sorted_iter().collect::<Vec<&usize>>(), vec![&0, &20, &30]);
 
+    assert_eq!(vec.len(), 3);
+    assert_eq!(vec.get(0), Some(&0));
+    assert_eq!(vec.get(1), Some(&30));
+    assert_eq!(vec.get(2), Some(&20));
+    assert_eq!(vec.get(3), None);
+    assert_eq!(vec.sorted_iter().collect::<Vec<&usize>>(), vec![&0, &20, &30]);
+
+    vec.push(10);
+    assert_eq!(vec.len(), 4);
+    assert_eq!(vec.get(0), Some(&0));
+    assert_eq!(vec.get(1), Some(&30));
+    assert_eq!(vec.get(2), Some(&20));
+    assert_eq!(vec.get(3), Some(&10));
+    assert_eq!(vec.get(4), None);
+    assert_eq!(vec.sorted_iter().collect::<Vec<&usize>>(), vec![&0, &10, &20, &30]);
+
+    assert_eq!(vec.len(), 4);
+    assert_eq!(vec.get(0), Some(&0));
+    assert_eq!(vec.get(1), Some(&30));
+    assert_eq!(vec.get(2), Some(&20));
+    assert_eq!(vec.get(3), Some(&10));
+    assert_eq!(vec.get(4), None);
+    assert_eq!(vec.sorted_iter().collect::<Vec<&usize>>(), vec![&0, &10, &20, &30]);
 }
 
 #[test]
@@ -297,4 +344,30 @@ fn test_set() {
     assert_eq!(vec.get(4), None);
     assert_eq!(vec.sorted_iter().collect::<Vec<&usize>>(), vec![&0, &10, &20, &30]);
 
+    vec.set(2, 21);
+    assert_eq!(vec.len(), 4);
+    assert_eq!(vec.get(0), Some(&0));
+    assert_eq!(vec.get(1), Some(&30));
+    assert_eq!(vec.get(2), Some(&21));
+    assert_eq!(vec.get(3), Some(&10));
+    assert_eq!(vec.get(4), None);
+    assert_eq!(vec.sorted_iter().collect::<Vec<&usize>>(), vec![&0, &10, &21, &30]);
+
+    vec.set(2, 31);
+    assert_eq!(vec.len(), 4);
+    assert_eq!(vec.get(0), Some(&0));
+    assert_eq!(vec.get(1), Some(&30));
+    assert_eq!(vec.get(2), Some(&31));
+    assert_eq!(vec.get(3), Some(&10));
+    assert_eq!(vec.get(4), None);
+    assert_eq!(vec.sorted_iter().collect::<Vec<&usize>>(), vec![&0, &10, &30, &31]);
+
+    vec.set(2, 1);
+    assert_eq!(vec.len(), 4);
+    assert_eq!(vec.get(0), Some(&0));
+    assert_eq!(vec.get(1), Some(&30));
+    assert_eq!(vec.get(2), Some(&1));
+    assert_eq!(vec.get(3), Some(&10));
+    assert_eq!(vec.get(4), None);
+    assert_eq!(vec.sorted_iter().collect::<Vec<&usize>>(), vec![&0, &1, &10, &30]);
 }
