@@ -1,0 +1,153 @@
+\documentclass{article}
+
+\title{Incrementalized sorting}
+\author{Matt Hammer\and Kyle Headley\and Alan Jeffrey}
+\date{DRAFT of 2016-08-16}
+
+\usepackage{graphicx}
+\usepackage{float}
+\usepackage{subcaption}
+
+\begin{document}
+
+\maketitle
+
+The following are experiments where a randomly generated tree of integers is written to a version of a vector, the vector is sorted, the tree is modified, the vector is updated, and sorted again. We measure the time and standard deviation for the final two steps of that process. Plotted points are offset for clarity, but each version's point is at the same tick mark (or between two). The vector versions are:
+
+Vec - common array, sorting resorts all data
+Presort - Modifications are tested for local order, and a resort flag is set if necessary. Sorting checks the flag, and if necessary, resort an array of indexes to the actual data.
+Permute - Modifications untested. Sorting checks the entire data for order. If it fails, the entire data is sorted to an array of indexes to the actual data.
+Merge - An enhancement to Presort, this stores sorted items and unsorted items seperately, to avoid resorting previously-sorted data.
+Presort-pad/Permute-pad/Merge-pad - vectors are as above, but the tree modifications place ``padding'' into the tree instead of deleting data. This padding is from trait Default, which means 0's for integers. Tree updates rewrite the padding as available on addition.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=.85\textwidth]{../target/data/init_dump.pdf}
+\end{figure}
+init-dump.pdf - Nanoseconds vs initial nodes, batches of 100 edits, average of 50 trials, data from removals. The time for the initial creation of the vec. 
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=.85\textwidth]{../target/data/init_sort.pdf}
+\end{figure}
+init-sort.pdf - Nanoseconds vs initial nodes, batches of 100 edits, average of 50 trials, data from removals. The time for the initial sort of the vec. 
+
+\begin{figure}[H]
+  \centering
+  \begin{subfigure}{.5\textwidth}
+    \includegraphics[width=\linewidth]{../target/data/removals-U.pdf}
+  \end{subfigure}%
+  \begin{subfigure}{.5\textwidth}
+    \includegraphics[width=\linewidth]{../target/data/removals-R.pdf}
+  \end{subfigure}
+  \includegraphics[width=.85\textwidth]{../target/data/removals.pdf}
+\end{figure}
+removals.pdf - Nanoseconds vs initial nodes, batches of 1 edit, average of 50 trials. All edits are the removal of a random tree branch. These trends are expected. Removing data requires resorting or padding (which all sorts to the beginning of the vec). The padded versions perform better because of the ease of sorting padding, the non-padded versions show overhead costs.
+
+\begin{figure}[H]
+  \centering
+  \begin{subfigure}{.5\textwidth}
+    \includegraphics[width=\linewidth]{../target/data/additions-U.pdf}
+  \end{subfigure}%
+  \begin{subfigure}{.5\textwidth}
+    \includegraphics[width=\linewidth]{../target/data/additions-R.pdf}
+  \end{subfigure}
+  \includegraphics[width=.85\textwidth]{../target/data/additions.pdf}
+\end{figure}
+additions.pdf - Nanoseconds vs initial nodes, batches of 1 edit, average of 50 trials. All edits add a tree of 5 nodes with any configuration. This tree is ``pushed'' to the branches of a random existing node. Trends in this plot are expected. Adding data always requires resorting, so we see the overhead of the versions.
+
+\begin{figure}[H]
+  \centering
+  \begin{subfigure}{.5\textwidth}
+    \includegraphics[width=\linewidth]{../target/data/shape_edit-U.pdf}
+  \end{subfigure}%
+  \begin{subfigure}{.5\textwidth}
+    \includegraphics[width=\linewidth]{../target/data/shape_edit-R.pdf}
+  \end{subfigure}
+  \includegraphics[width=.85\textwidth]{../target/data/shape_edit.pdf}
+\end{figure}
+shape-edit.pdf - Nanoseconds vs initial nodes, batches of 1 edit, average of 50 trials. Edits are 50\% chance to add, 50\% to remove, as defined above. These trends are expected, since the plot is some combination of the above. The padded versions where different above, and the standard deviation reflects this. 
+
+\begin{figure}[H]
+  \centering
+  \begin{subfigure}{.5\textwidth}
+    \includegraphics[width=\linewidth]{../target/data/data_incr-U.pdf}
+  \end{subfigure}%
+  \begin{subfigure}{.5\textwidth}
+    \includegraphics[width=\linewidth]{../target/data/data_incr-R.pdf}
+  \end{subfigure}
+  \includegraphics[width=.85\textwidth]{../target/data/data_incr.pdf}
+\end{figure}
+data-incr.pdf - Nanoseconds vs initial nodes, batches of 1 edit, average of 50 trials. Edits change a single value only, expected not to change sort order. Trends in this plot are unexpected. We would like to see nearly flat lines for all non-vec versions, but the overhead comes into play. Presort is better than permute, but not as much as we hoped.
+
+\begin{figure}[H]
+  \centering
+  \begin{subfigure}{.5\textwidth}
+    \includegraphics[width=\linewidth]{../target/data/data_change-U.pdf}
+  \end{subfigure}%
+  \begin{subfigure}{.5\textwidth}
+    \includegraphics[width=\linewidth]{../target/data/data_change-R.pdf}
+  \end{subfigure}
+  \includegraphics[width=.85\textwidth]{../target/data/data_change.pdf}
+\end{figure}
+data-change.pdf - Nanoseconds vs initial nodes, batches of 1 edit, average of 50 trials. Edits change a single value only, expected to require resorting. 
+
+\begin{figure}[H]
+  \centering
+  \begin{subfigure}{.5\textwidth}
+    \includegraphics[width=\linewidth]{../target/data/data_edit-U.pdf}
+  \end{subfigure}%
+  \begin{subfigure}{.5\textwidth}
+    \includegraphics[width=\linewidth]{../target/data/data_edit-R.pdf}
+  \end{subfigure}
+  \includegraphics[width=.85\textwidth]{../target/data/data_edit.pdf}
+\end{figure}
+data-edit.pdf - Nanoseconds vs initial nodes, batches of 1 edit, average of 50 trials. Edits change a single value only, 50\% chance to require resorting. Trends in this plot are expected. The chance to require resorting is high, and the standard deviation reflects some chance for easy sorting.
+
+\begin{figure}[H]
+  \centering
+  \begin{subfigure}{.5\textwidth}
+    \includegraphics[width=\linewidth]{../target/data/resort_chance-U.pdf}
+  \end{subfigure}%
+  \begin{subfigure}{.5\textwidth}
+    \includegraphics[width=\linewidth]{../target/data/resort_chance-R.pdf}
+  \end{subfigure}
+  \includegraphics[width=.85\textwidth]{../target/data/resort_chance.pdf}
+\end{figure}
+resort-chance.pdf - Nanoseconds vs probability of resort, batches of 1 edit, 10000 initial tree nodes, average of 50 trials. Edits are to individual node data, each have a chance (from axis) to expect requiring a resort. Trends are expected, as the chance for an expensive sort increases across the plot. Standard deviation reflects the variability, low at the ends and high in the middle.
+
+\begin{figure}[H]
+  \centering
+  \begin{subfigure}{.5\textwidth}
+    \includegraphics[width=\linewidth]{../target/data/shape_chance-U.pdf}
+  \end{subfigure}%
+  \begin{subfigure}{.5\textwidth}
+    \includegraphics[width=\linewidth]{../target/data/shape_chance-R.pdf}
+  \end{subfigure}
+  \includegraphics[width=.85\textwidth]{../target/data/shape_chance.pdf}
+\end{figure}
+shape-chance.pdf - Nanoseconds vs probability of shape change, batches of 1 edit, 10000 initial tree nodes, average of 50 trials. Edits are either single data edits, or branch modifications, probability on axis. After selection, the probability of add vs remove is 50\%, the probability of resort from individual edit is 50\%. Trends are expected. Shape changes always require resorting, so time increases across the plot. Padded versions do better, but overhead still reduces most benefits.
+
+\begin{figure}[H]
+  \centering
+  \begin{subfigure}{.5\textwidth}
+    \includegraphics[width=\linewidth]{../target/data/data_batches-U.pdf}
+  \end{subfigure}%
+  \begin{subfigure}{.5\textwidth}
+    \includegraphics[width=\linewidth]{../target/data/data_batches-R.pdf}
+  \end{subfigure}
+  \includegraphics[width=.85\textwidth]{../target/data/data_batches.pdf}
+\end{figure}
+data-batches.pdf - Nanoseconds vs batch edit size, average of 50 trials, 10000 initial tree nodes. Each edit is to an individual node, with a 10\% chance that it will require resorting. Trends are somewhat expected, with the time to update dominating the trend for vec. We also suspect that the sorting algorithms work well in incremental settings. 
+
+\paragraph{Problems noticed} Version ``vec'' is unsound in this setting: modifications happen on the post-sorted version, changing the wrong data; timing is likely unaffected. No version is aware of padding, so inserted padding (values changed to 0's) will change sort order; some sorting optimizations may handle strings of 0's better than treating them individually. MergeVec is capable of handling padding in its data structure, but the test has not yet been modified to use those (unwritten) function calls.
+
+I don't know why MergeVec was so low on initial sorting or so high on data-incr.
+
+
+\cite{servo}
+
+\bibliographystyle{plain}
+\bibliography{paper}
+
+\end{document}
