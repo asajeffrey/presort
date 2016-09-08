@@ -1,4 +1,4 @@
-EXPERIMENTS = shape_edit additions removals shape_chance data_edit data_incr resort_chance
+EXPERIMENTS = shape_edit additions removals shape_chance data_edit data_incr resort_chance data_batches
 DATAFILES = $(addprefix ../target/data/, $(addsuffix .data, $(EXPERIMENTS)))
 PDFFILES = $(addprefix ../target/data/, $(addsuffix .pdf, $(EXPERIMENTS)))
 

@@ -1,5 +1,5 @@
 # name of experiment
-EXPR="resort_chance"
+EXPR="data_batches"
 
 # files created/overwritten
 DATA="../target/data/${EXPR}.data"
@@ -7,7 +7,7 @@ PLOT="../target/data/${EXPR}.pdf"
 
 # benchmark program and fixed parameters
 BENCH="cargo run --release --example presort_bench --"
-ARGS="--tag ${EXPR} -t 50 -d 13 -n 10000 -e 100 -s 0 -a 0 "
+ARGS="--tag ${EXPR} -t 50 -s 0 -c 0.1"
 VERS="vec presort presort_pad permute permute_pad merge merge_pad"
 
 # Collect Data
@@ -25,11 +25,11 @@ if [ $# = 0 ]; then
 		$BENCH -h -t 0 -o $DATA
 
 		# run benches
-		for chance in `seq 0 0.1 1`; do
-			$BENCH $ARGS --$ver -c $chance -o $DATA
+		for edits in 1 3 10 33 100 333 1000 3333 10000; do
+			$BENCH $ARGS --$ver -e $edits -o $DATA
 		done
 
-		#separate by 2 lines for gnuplot data indexes
+		# separate by 2 lines for gnuplot data indexes
 		echo >> $DATA
 		echo >> $DATA
 
@@ -51,13 +51,15 @@ set terminal pdf
 set output '$PLOT'
 # compute stddev sum
 ss(x,y) = sqrt((x**2 + y**2) / 2)
+# this a log plot
+set logscale x
 # plot lines
 plot \\" > gnuplotscript
 
 i=0
 for ver in $VERS; do
 	# add plot line for version
-	echo "'$DATA' i $i using (\$10+${i}*0.01):(\$17+\$19):(ss(\$18,\$20)) \\" >> gnuplotscript
+	echo "'$DATA' i $i using (\$7*(1+${i}*0.1)):(\$17+\$19):(ss(\$18,\$20)) \\" >> gnuplotscript
 	echo "title '$ver update+sort time' with errorbars, \\" >> gnuplotscript
 	((i++))
 done

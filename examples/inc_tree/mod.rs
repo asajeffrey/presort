@@ -29,6 +29,7 @@ pub trait IncTree<T: PartialEq + Clone> {
     fn flag_as_updated(&self);
     fn get_data(&self) -> T;
     fn set_data(&self, data: T);
+    fn get_parent(&self) -> Option<(Tree<T>, usize)>;
     fn get_child(&self, child_num: usize) -> Tree<T>;
     fn set_child(&self, child_num: usize, child: Tree<T>);
     fn push_child(&self, child: Tree<T>);
@@ -83,6 +84,11 @@ impl<T: PartialEq + Clone> IncTree<T> for Tree<T> {
         self.flag_as_updated();
     }
 
+    // unless this is a root, it returns parent tree and the index of the child
+    fn get_parent(&self) -> Option<(Tree<T>, usize)> {
+        self.borrow().parent.clone() //Rc clone
+    }
+
     fn get_child(&self, child_num: usize) -> Tree<T> {
         self.borrow().children[child_num].clone() //Rc clone
     }
@@ -118,6 +124,15 @@ impl<T: PartialEq + Clone> IncTree<T> for Tree<T> {
         }
         self.flag_as_updated();
         self.borrow_mut().children.remove(child);
+        // update the parent index of each child
+        let num_children = self.borrow().children.len();
+        for i in child..num_children {
+            let tree = self.borrow_mut();
+            let mut child = tree.children[i].borrow_mut();
+            if let Some((p,i)) = child.parent.take() {
+                child.parent = Some((p,i-1));
+            }
+        }
     }
 
     fn num_children(&self) -> usize {
@@ -158,10 +173,12 @@ pub fn update<T: Ord+Clone+Default, V: SortVec<T>>(tree: &Tree<T>, free_index: u
     let mut tree = tree.borrow_mut();
     // move if there's no space
     if tree.vec_index < free_index {
+        //println!("pad index change");
         tree.vec_index = free_index;
         tree.needs_update = true;
         tree.dirty_val = true;
     } else if tree.vec_index > free_index {
+        //println!("add pad");
         // extend with padding if there's extra space
         // TODO: consider limiting this padding
         for i in free_index..tree.vec_index {vec.set(i, T::default())}
@@ -181,13 +198,19 @@ pub fn update<T: Ord+Clone+Default, V: SortVec<T>>(tree: &Tree<T>, free_index: u
         }
         tree.needs_update = false;
     } else {
-        // find last index
-        let num_children = tree.children.len();
-        if num_children > 0 {
-            next_free_index = tree.children[num_children - 1].borrow().vec_index + 1;
-        }
+        next_free_index = last_index(&*tree) + 1
     }
     next_free_index
+}
+
+fn last_index<T>(tree: &TreeNode<T>) -> usize {
+    let num_children = tree.children.len();
+    if num_children > 0 {
+        let last_child = tree.children[num_children - 1].borrow();
+        last_index(&*last_child)
+    } else {
+        tree.vec_index
+    }
 }
 
 // similar to update, but compacts the data and truncates the vec
@@ -201,6 +224,7 @@ fn update_no_pad_internal<T: Ord+Clone, V: SortVec<T>>(tree: &Tree<T>, free_inde
     let mut tree = tree.borrow_mut();
     // move if wrong place
     if tree.vec_index != free_index {
+        //println!("no_pad index change");
         tree.vec_index = free_index;
         tree.needs_update = true;
         tree.dirty_val = true;
@@ -220,11 +244,7 @@ fn update_no_pad_internal<T: Ord+Clone, V: SortVec<T>>(tree: &Tree<T>, free_inde
         }
         tree.needs_update = false;
     } else {
-        // find last index
-        let num_children = tree.children.len();
-        if num_children > 0 {
-            next_free_index = tree.children[num_children - 1].borrow().vec_index + 1;
-        }
+        next_free_index = last_index(&*tree) + 1
     }
     next_free_index
 }
